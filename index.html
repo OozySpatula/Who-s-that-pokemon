@@ -149,6 +149,12 @@
         width: 70%;
       }
     }
+
+    label {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 0.5em;
+    }
   </style>
 </head>
 <body>
@@ -158,6 +164,11 @@
     <div>Streak: <span id="streak">0</span></div>
     <div>Best: <span id="bestStreak">0</span></div>
   </div>
+
+  <label>
+    <input type="checkbox" id="includeForms" checked />
+    Include Forms
+  </label>
 
   <div class="pokemon-container">
     <img id="pokemonImg" alt="Pokémon silhouette" />
@@ -174,6 +185,8 @@
   <canvas id="confetti-canvas"></canvas>
 
   <script>
+    let basePokemonList = [];
+    let formsPokemonList = [];
     let pokemonList = [];
     let currentPokemon = "";
     let silhouetteIndex = 0;
@@ -195,14 +208,31 @@
 
     async function loadPokemonList() {
       try {
-        const response = await fetch("./public/pokemon.txt");
-        const text = await response.text();
-        pokemonList = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+        const [baseRes, formsRes] = await Promise.all([
+          fetch("./public/pokemon.txt"),
+          fetch("./public/forms.txt")
+        ]);
+
+        const baseText = await baseRes.text();
+        const formsText = await formsRes.text();
+
+        basePokemonList = baseText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        formsPokemonList = formsText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+        updatePokemonPool();
+
         document.getElementById("bestStreak").textContent = bestStreak;
         nextPokemon();
       } catch (err) {
-        console.error("Failed to load pokemon.txt", err);
+        console.error("Failed to load Pokémon lists", err);
       }
+    }
+
+    function updatePokemonPool() {
+      const includeForms = document.getElementById("includeForms").checked;
+      pokemonList = includeForms
+        ? [...basePokemonList, ...formsPokemonList]
+        : [...basePokemonList];
     }
 
     function nextPokemon() {
@@ -286,6 +316,11 @@
 
     guessButton.addEventListener("click", checkGuess);
     guessInput.addEventListener("keydown", e => { if(e.key==="Enter") checkGuess(); });
+
+    document.getElementById("includeForms").addEventListener("change", () => {
+      updatePokemonPool();
+      nextPokemon();
+    });
 
     document.addEventListener("DOMContentLoaded", () => {
       badgeEl.style.opacity = 0;
