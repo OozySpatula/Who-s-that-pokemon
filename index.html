@@ -4,57 +4,143 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Who's That Pokémon?</title>
-
   <style>
-    body {
-      background: #FAF9F6;
-      color: rgb(0, 0, 0);
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
       font-family: Arial, sans-serif;
+      background: #f7f7f7;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0.5em;
+    }
+
+    h1 {
+      font-size: 1.8em;
+      margin-bottom: 0.5em;
       text-align: center;
-      padding: 20px;
+      color: #333;
     }
 
-    img {
-      width: 80%;
+    .streaks {
+      width: 90%;
       max-width: 300px;
-      height: auto;
-      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      margin: 0.5em 0;
+      font-size: 1rem;
+      color: #555;
     }
 
-    input,
+    .pokemon-container {
+      position: relative;
+      width: 40vw;
+      max-width: 300px;
+      min-width: 200px;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    .pokemon-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: transform 0.3s ease;
+    }
+
+    input {
+      width: 60%;
+      max-width: 180px;
+      padding: 0.6em;
+      font-size: 1rem;
+      margin: 0.2em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
     button {
       padding: 12px;
       font-size: 18px;
       margin: 5px;
       border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-
-    input {
-      width: 60%;
-      max-width: 200px;
-    }
-
-    button {
+      border: none;
       cursor: pointer;
       background-color: #ffcb05;
-      border: none;
+      transition: background-color 0.2s ease;
     }
 
     button:hover {
       background-color: #f5b700;
     }
 
-    .streaks {
-      margin: 10px auto 20px;
-      font-size: 18px;
-      display: flex;
-      justify-content: space-between;
-      max-width: 300px;
+    .badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #00ff00;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 10px;
+      font-weight: bold;
+      opacity: 0; /* hidden initially */
+      pointer-events: none;
+    }
+
+    /* Badge pop animation */
+    @keyframes badgePop {
+      0% { transform: scale(0); opacity: 1; }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .pop {
+      animation: badgePop 0.6s forwards;
+    }
+
+    /* Shake for wrong guess */
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0); }
+    }
+
+    .shake {
+      animation: shake 0.4s;
+    }
+
+    /* Confetti canvas */
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+      z-index: 1000;
+    }
+
+    @media (max-width: 400px) {
+      .pokemon-container {
+        width: 70vw;
+      }
+      input {
+        width: 70%;
+      }
     }
   </style>
 </head>
-
 <body>
   <h1>Who's That Pokémon?</h1>
 
@@ -63,17 +149,18 @@
     <div>Best: <span id="bestStreak">0</span></div>
   </div>
 
-
-  <img id="pokemonImg" alt="Pokémon silhouette" />
-
-  <div>
-    <input id="guess" placeholder="Enter Pokémon name" />
-    <button onclick="checkGuess()">Guess</button>
+  <div class="pokemon-container">
+    <img id="pokemonImg" alt="Pokémon silhouette" />
+    <div id="badge" class="badge">Correct!</div>
   </div>
 
-  <p id="result"></p>
+  <div style="display: flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
+    <input id="guess" placeholder="Enter Pokémon name" />
+    <button onclick="checkGuess()">Guess</button>
+    <button onclick="nextPokemon()">Next</button>
+  </div>
 
-  <button onclick="nextPokemon()">Next</button>
+  <canvas id="confetti-canvas"></canvas>
 
   <script>
     let pokemonList = [];
@@ -85,6 +172,9 @@
     let bestStreak = localStorage.getItem("bestStreak")
       ? parseInt(localStorage.getItem("bestStreak"))
       : 0;
+
+    const badgeEl = document.getElementById("badge");
+    const pokemonImg = document.getElementById("pokemonImg");
 
     async function loadPokemonList() {
       try {
@@ -114,10 +204,13 @@
       silhouetteIndex = Math.floor(Math.random() * 4);
       currentSuffix = `_${silhouetteIndex}`;
 
-      document.getElementById("pokemonImg").src =
+      pokemonImg.src =
         `./public/Pokemon_Renders/${currentPokemon}/silhouettes/${currentPokemon}${currentSuffix}.png`;
 
-      document.getElementById("result").textContent = "";
+      // Hide badge and reset shake
+      badgeEl.style.opacity = 0;
+      pokemonImg.classList.remove("shake");
+
       document.getElementById("guess").value = "";
       document.getElementById("guess").focus();
     }
@@ -126,7 +219,7 @@
       const guess = document.getElementById("guess").value.trim().toLowerCase();
 
       if (guess === currentPokemon.toLowerCase()) {
-        document.getElementById("pokemonImg").src =
+        pokemonImg.src =
           `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
 
         streak++;
@@ -138,15 +231,29 @@
           document.getElementById("bestStreak").textContent = bestStreak;
         }
 
-        document.getElementById("result").textContent = "Correct!";
+        // Show badge
+        badgeEl.style.opacity = 1;
+        badgeEl.classList.remove("badge");
+        void badgeEl.offsetWidth; // restart animation
+        badgeEl.classList.add("badge");
+
+        setTimeout(() => {
+          badgeEl.style.opacity = 0;
+        }, 1000);
+
+        launchConfetti();
       } else {
         streak = 0;
         document.getElementById("streak").textContent = streak;
-        document.getElementById("result").textContent = "Try again!";
+
+        pokemonImg.classList.remove("shake");
+        void pokemonImg.offsetWidth;
+        pokemonImg.classList.add("shake");
       }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      badgeEl.style.opacity = 0; // ensure hidden on load
       loadPokemonList();
 
       document.getElementById("guess").addEventListener("keydown", event => {
@@ -154,6 +261,51 @@
           checkGuess();
         }
       });
+    });
+
+    // Confetti
+    const confettiCanvas = document.getElementById("confetti-canvas");
+    const ctx = confettiCanvas.getContext("2d");
+    let confettiParticles = [];
+
+    function launchConfetti() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+      confettiParticles = [];
+      for (let i = 0; i < 150; i++) {
+        confettiParticles.push({
+          x: Math.random() * confettiCanvas.width,
+          y: Math.random() * confettiCanvas.height - confettiCanvas.height,
+          r: Math.random() * 6 + 4,
+          d: Math.random() * 30,
+          color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+          tilt: Math.random() * 10 - 10,
+          tiltAngleIncremental: Math.random() * 0.07 + 0.05
+        });
+      }
+      requestAnimationFrame(drawConfetti);
+      setTimeout(() => confettiParticles = [], 1000);
+    }
+
+    function drawConfetti() {
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      confettiParticles.forEach(p => {
+        ctx.beginPath();
+        ctx.lineWidth = p.r / 2;
+        ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r / 4, p.y);
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 4);
+        ctx.stroke();
+        p.tilt += p.tiltAngleIncremental;
+        p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+        if (p.y > confettiCanvas.height) p.y = -10;
+      });
+      if (confettiParticles.length > 0) requestAnimationFrame(drawConfetti);
+    }
+
+    window.addEventListener('resize', () => {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
     });
   </script>
 </body>
