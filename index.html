@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Who's That Pokémon?</title>
+
   <style>
     body {
       background: #FAF9F6;
@@ -12,41 +13,66 @@
       text-align: center;
       padding: 20px;
     }
+
     img {
       width: 80%;
       max-width: 300px;
       height: auto;
       margin-bottom: 20px;
     }
-    input, button {
+
+    input,
+    button {
       padding: 12px;
       font-size: 18px;
       margin: 5px;
       border-radius: 5px;
       border: 1px solid #ccc;
     }
+
     input {
       width: 60%;
       max-width: 200px;
     }
+
     button {
       cursor: pointer;
       background-color: #ffcb05;
       border: none;
     }
+
     button:hover {
       background-color: #f5b700;
     }
+
+    .streaks {
+      margin: 10px auto 20px;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      max-width: 300px;
+    }
   </style>
 </head>
+
 <body>
   <h1>Who's That Pokémon?</h1>
-  <img id="pokemonImg" />
+
+  <div class="streaks">
+    <div>Streak: <span id="streak">0</span></div>
+    <div>Best: <span id="bestStreak">0</span></div>
+  </div>
+
+
+  <img id="pokemonImg" alt="Pokémon silhouette" />
+
   <div>
     <input id="guess" placeholder="Enter Pokémon name" />
     <button onclick="checkGuess()">Guess</button>
   </div>
+
   <p id="result"></p>
+
   <button onclick="nextPokemon()">Next</button>
 
   <script>
@@ -55,15 +81,24 @@
     let silhouetteIndex = 0;
     let currentSuffix = "";
 
-    // Load Pokémon names from public/pokemon.txt
+    let streak = 0;
+    let bestStreak = localStorage.getItem("bestStreak")
+      ? parseInt(localStorage.getItem("bestStreak"))
+      : 0;
+
     async function loadPokemonList() {
       try {
-        const response = await fetch('./public/pokemon.txt'); // relative path
+        const response = await fetch("./public/pokemon.txt");
         const text = await response.text();
-        pokemonList = text.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+        pokemonList = text
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
+
+        document.getElementById("bestStreak").textContent = bestStreak;
         nextPokemon();
       } catch (err) {
-        console.error('Failed to load pokemon.txt', err);
+        console.error("Failed to load pokemon.txt", err);
       }
     }
 
@@ -76,8 +111,8 @@
       } while (next === currentPokemon && pokemonList.length > 1);
 
       currentPokemon = next;
-      silhouetteIndex = Math.floor(Math.random() * 4); // 0 to 3
-      currentSuffix = `_${silhouetteIndex}`;           // Always use _0, _1, etc.
+      silhouetteIndex = Math.floor(Math.random() * 4);
+      currentSuffix = `_${silhouetteIndex}`;
 
       document.getElementById("pokemonImg").src =
         `./public/Pokemon_Renders/${currentPokemon}/silhouettes/${currentPokemon}${currentSuffix}.png`;
@@ -91,11 +126,22 @@
       const guess = document.getElementById("guess").value.trim().toLowerCase();
 
       if (guess === currentPokemon.toLowerCase()) {
-        // Show full image (same suffix)
         document.getElementById("pokemonImg").src =
           `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
+
+        streak++;
+        document.getElementById("streak").textContent = streak;
+
+        if (streak > bestStreak) {
+          bestStreak = streak;
+          localStorage.setItem("bestStreak", bestStreak);
+          document.getElementById("bestStreak").textContent = bestStreak;
+        }
+
         document.getElementById("result").textContent = "Correct!";
       } else {
+        streak = 0;
+        document.getElementById("streak").textContent = streak;
         document.getElementById("result").textContent = "Try again!";
       }
     }
@@ -103,8 +149,10 @@
     document.addEventListener("DOMContentLoaded", () => {
       loadPokemonList();
 
-      document.getElementById("guess").addEventListener("keydown", function(event) {
-        if (event.key === "Enter") checkGuess();
+      document.getElementById("guess").addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+          checkGuess();
+        }
       });
     });
   </script>
