@@ -58,6 +58,19 @@
       transition: transform 0.3s ease;
     }
 
+    #pokemonName {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #333;
+      text-shadow: 1px 1px 2px #fff;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
     input {
       width: 60%;
       max-width: 180px;
@@ -149,6 +162,7 @@
   <div class="pokemon-container">
     <img id="pokemonImg" alt="Pokémon silhouette" />
     <div id="badge" class="badge">Correct!</div>
+    <div id="pokemonName"></div>
   </div>
 
   <div style="display: flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
@@ -172,11 +186,12 @@
 
     const badgeEl = document.getElementById("badge");
     const pokemonImg = document.getElementById("pokemonImg");
+    const pokemonNameEl = document.getElementById("pokemonName");
     const guessInput = document.getElementById("guess");
     const guessButton = document.getElementById("guessButton");
     const nextButton = document.getElementById("nextButton");
 
-    let guessed = false; // track if guessed or skipped
+    let guessed = false;
 
     async function loadPokemonList() {
       try {
@@ -211,6 +226,7 @@
       guessInput.disabled = false;
       guessButton.disabled = false;
       nextButton.textContent = "Skip";
+      pokemonNameEl.style.opacity = 0;
       guessed = false;
       guessInput.focus();
     }
@@ -254,8 +270,11 @@
 
     nextButton.addEventListener("click", () => {
       if (!guessed && nextButton.textContent === "Skip") {
-        // Reveal current Pokémon
+        // Reveal Pokémon and name
         pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
+        pokemonNameEl.textContent = currentPokemon;
+        pokemonNameEl.style.opacity = 1;
+
         guessInput.disabled = true;
         guessButton.disabled = true;
         nextButton.textContent = "Next";
