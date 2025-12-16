@@ -1,0 +1,60 @@
+Alolan Vulpix
+Alolan Diglett
+Alolan Dugtrio
+Alolan Exeggcute
+Alolan Geodude
+Alolan Golem
+Alolan Graveler
+Alolan Grimer
+Alolan Marowak
+Alolan Meowth
+Alolan Muk
+Alolan Ninetales
+Alolan Persian
+Alolan Raichu
+Alolan Raticate
+Alolan Rattata
+Alolan Sandshrew
+Alolan Sandslash
+Galarian Zapdos
+Galarian Articuno
+Galarian Farfetch'd
+Galarian Meowth
+Galarian Moltres
+Galarian Mr. Mime
+Galarian Ponyta
+Galarian Rapidash
+Galarian Slowbro
+Galarian Slowpoke
+Galarian Weezing
+Gigantamax Venusaur
+Gigantamax Blastoise
+Gigantamax Butterfree
+Gigantamax Charizard
+Gigantamax Eevee
+Gigantamax Gengar
+Gigantamax Kingler
+Gigantamax Machamp
+Gigantamax Meowth
+Gigantamax Pikachu
+Gigantamax Snorlax
+Hisuian Voltorb
+Hisuian Arcanine
+Hisuian Electrode
+Hisuian Growlithe
+Mega Venusaur
+Mega Aerodactyl
+Mega Alakazam
+Mega Beedrill
+Mega Blastoise
+Mega Charizard X
+Mega Charizard Y
+Mega Gengar
+Mega Gyarados
+Mega Kangaskhan
+Mega Lapras
+Mega Mewtwo X
+Mega Mewtwo Y
+Mega Pidgeotto
+Mega Pinsir
+Mega Slowbro
