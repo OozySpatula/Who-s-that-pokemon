@@ -141,6 +141,61 @@
       z-index: 1000;
     }
 
+    .corner-info {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      border-radius: 999px;
+      background: #eee;
+      color: #333;
+      z-index: 1100;
+    }
+
+    .corner-panel {
+      position: fixed;
+      bottom: 60px;
+      right: 12px;
+      width: 260px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 0.8em;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+      font-size: 0.85rem;
+      display: none;
+      z-index: 1100;
+    }
+
+    .corner-panel h3 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+
+    .forms-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4em;
+      white-space: nowrap;      /* ← key line */
+      width: fit-content;
+    }
+
+    .forms-toggle span {
+      white-space: nowrap;      /* ← defensive */
+    }
+
+    .corner-panel hr {
+      margin: 0.6em 0;
+      border: none;
+      border-top: 1px solid #ddd;
+    }
+
+    .corner-panel details summary {
+      cursor: pointer;
+      color: #555;
+    }
+
+
     @media (max-width: 400px) {
       .pokemon-container {
         width: 70vw;
@@ -165,10 +220,27 @@
     <div>Best: <span id="bestStreak">0</span></div>
   </div>
 
-  <label>
-    <input type="checkbox" id="includeForms" />
-    Include Forms
-  </label>
+  <button id="formsBtn" class="corner-info">Forms</button>
+
+  <div id="formsPanel" class="corner-panel">
+    <h3>Forms</h3>
+
+    <label class="forms-toggle">
+      <input type="checkbox" id="includeForms" />
+      <span>Include Forms</span>
+    </label>
+
+    <hr />
+
+    <details>
+      <summary>Excluded forms (look too similar)</summary>
+      <ul>
+        <li>Alolan Grimer</li>
+        <li>Alolan Muk</li>
+        <li>Alolan Vulpix</li>
+      </ul>
+    </details>
+  </div>
 
   <div class="pokemon-container">
     <img id="pokemonImg" alt="Pokémon silhouette" />
@@ -371,6 +443,18 @@
       confettiCanvas.width = window.innerWidth;
       confettiCanvas.height = window.innerHeight;
     });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const formsBtn = document.getElementById("formsBtn");
+    const formsPanel = document.getElementById("formsPanel");
+
+    if (!formsBtn || !formsPanel) return;
+
+    formsBtn.addEventListener("click", () => {
+      formsPanel.style.display =
+        formsPanel.style.display === "block" ? "none" : "block";
+    });
+  });
   </script>
 </body>
 </html>
