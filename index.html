@@ -347,8 +347,20 @@
       silhouetteIndex = Math.floor(Math.random() * 4);
       currentSuffix = `_${silhouetteIndex}`;
 
-      pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
-      pokemonImg.classList.add("silhouette");
+      // Hide image while loading
+      pokemonImg.style.opacity = 0;
+      pokemonImg.classList.remove("silhouette");
+
+      const newSrc = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
+
+      const img = new Image();
+      img.src = newSrc;
+
+      img.onload = () => {
+        pokemonImg.src = newSrc;
+        pokemonImg.classList.add("silhouette");
+        pokemonImg.style.opacity = 1;
+      };
 
       badgeEl.style.opacity = 0;
       pokemonImg.classList.remove("shake");
