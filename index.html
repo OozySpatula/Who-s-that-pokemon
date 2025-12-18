@@ -5,244 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Who's That Pokémon?</title>
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-around;
-      align-items: center;
-      padding: 0.5em;
-    }
-
-    h1 {
-      font-size: 1.8em;
-      margin-bottom: 0.5em;
-      text-align: center;
-      color: #333;
-    }
-
-    .streaks {
-      width: 90%;
-      max-width: 300px;
-      display: flex;
-      justify-content: space-between;
-      margin: 0.5em 0;
-      font-size: 1rem;
-      color: #555;
-    }
-
-    .pokemon-container {
-      position: relative;
-      width: 40vw;
-      max-width: 300px;
-      min-width: 200px;
-      aspect-ratio: 1 / 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      border-radius: 10px;
-    }
-
-    .pokemon-container img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      transition: transform 0.3s ease;
-    }
-
-    #pokemonName {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 1.2em;
-      font-weight: bold;
-      color: #333;
-      text-shadow: 1px 1px 2px #fff;
-      opacity: 0;
-      transition: opacity 0.5s;
-    }
-
-    input {
-      width: 60%;
-      max-width: 180px;
-      padding: 0.6em;
-      font-size: 1rem;
-      margin: 0.2em;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      padding: 12px;
-      font-size: 18px;
-      margin: 5px;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
-      background-color: #ffcb05;
-      transition: background-color 0.2s ease;
-    }
-
-    button:hover {
-      background-color: #f5b700;
-    }
-
-    .badge {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #00ff00;
-      color: #fff;
-      padding: 5px 10px;
-      border-radius: 10px;
-      font-weight: bold;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    @keyframes badgePop {
-      0% { transform: scale(0); opacity: 1; }
-      50% { transform: scale(1.4); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .pop {
-      animation: badgePop 0.6s forwards;
-    }
-
-    @keyframes shake {
-      0% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      50% { transform: translateX(5px); }
-      75% { transform: translateX(-5px); }
-      100% { transform: translateX(0); }
-    }
-
-    .shake {
-      animation: shake 0.4s;
-    }
-
-    #confetti-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-      width: 100%;
-      height: 100%;
-      z-index: 1000;
-    }
-
-    .corner-info {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      padding: 8px 14px;
-      font-size: 0.9rem;
-      border-radius: 999px;
-      background: #eee;
-      color: #333;
-      z-index: 1100;
-    }
-
-    .corner-panel {
-      position: fixed;
-      top: 52px;
-      right: 12px;
-      width: 260px;
-      background: #fff;
-      border-radius: 12px;
-      padding: 0.8em;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-      font-size: 0.85rem;
-      display: none;
-      z-index: 1100;
-    }
-
-    .corner-panel h3 {
-      margin-top: 0;
-      font-size: 1rem;
-    }
-
-    .forms-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4em;
-      white-space: nowrap;
-      width: fit-content;
-      margin-bottom: 0.5em;
-    }
-
-    .forms-toggle span {
-      white-space: nowrap;
-    }
-
-    .corner-panel hr {
-      margin: 0.6em 0;
-      border: none;
-      border-top: 1px solid #ddd;
-    }
-
-    .corner-panel details summary {
-      cursor: pointer;
-      color: #555;
-    }
-
-    .silhouette {
-      filter: brightness(0) contrast(200%);
-    }
-
-    @media (max-width: 400px) {
-      .pokemon-container {
-        width: 70vw;
-      }
-      input {
-        width: 70%;
-      }
-    }
-
-    label {
-      font-size: 0.9rem;
-      color: #555;
-      margin-bottom: 0.5em;
-    }
-
-    @media (max-width: 500px) {
-      .corner-panel {
-        width: 90%;
-        right: 50%;
-        transform: translateX(50%);
-        top: 60px;
-        padding: 1em;
-        font-size: 0.95rem;
-      }
-
-      .corner-panel h3 {
-        font-size: 1.1rem;
-      }
-
-      .forms-toggle {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.2em;
-      }
-
-      .forms-toggle span {
-        font-size: 1rem;
-      }
-
-      .corner-panel ul {
-        padding-left: 1.2em;
-      }
-    }
+    html, body { height: 100%; margin: 0; overflow: hidden; font-family: Arial, sans-serif; background: #f7f7f7; }
+    body { display: flex; flex-direction: column; justify-content: space-around; align-items: center; padding: 0.5em; }
+    h1 { font-size: 1.8em; margin-bottom: 0.5em; text-align: center; color: #333; }
+    .streaks { width: 90%; max-width: 300px; display: flex; justify-content: space-between; margin: 0.5em 0; font-size: 1rem; color: #555; }
+    .pokemon-container { position: relative; width: 40vw; max-width: 300px; min-width: 200px; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 10px; }
+    .pokemon-container img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.3s ease; }
+    #pokemonName { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 1.2em; font-weight: bold; color: #333; text-shadow: 1px 1px 2px #fff; opacity: 0; transition: opacity 0.5s; }
+    input { width: 60%; max-width: 180px; padding: 0.6em; font-size: 1rem; margin: 0.2em; border-radius: 5px; border: 1px solid #ccc; }
+    button { padding: 12px; font-size: 18px; margin: 5px; border-radius: 5px; border: none; cursor: pointer; background-color: #ffcb05; transition: background-color 0.2s ease; }
+    button:hover { background-color: #f5b700; }
+    .badge { position: absolute; top: 10px; right: 10px; background: #00ff00; color: #fff; padding: 5px 10px; border-radius: 10px; font-weight: bold; opacity: 0; pointer-events: none; }
+    @keyframes badgePop { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1.4); } 100% { transform: scale(1); opacity: 1; } }
+    .pop { animation: badgePop 0.6s forwards; }
+    @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+    .shake { animation: shake 0.4s; }
+    #confetti-canvas { position: fixed; top: 0; left: 0; pointer-events: none; width: 100%; height: 100%; z-index: 1000; }
+    .corner-info { position: fixed; top: 12px; right: 12px; padding: 8px 14px; font-size: 0.9rem; border-radius: 999px; background: #eee; color: #333; z-index: 1100; }
+    .corner-panel { position: fixed; top: 52px; right: 12px; width: 260px; background: #fff; border-radius: 12px; padding: 0.8em; box-shadow: 0 6px 16px rgba(0,0,0,0.2); font-size: 0.85rem; display: none; z-index: 1100; }
+    .corner-panel h3 { margin-top: 0; font-size: 1rem; }
+    .forms-toggle { display: inline-flex; align-items: center; gap: 0.4em; white-space: nowrap; width: fit-content; margin-bottom: 0.5em; }
+    .forms-toggle span { white-space: nowrap; }
+    .corner-panel hr { margin: 0.6em 0; border: none; border-top: 1px solid #ddd; }
+    .corner-panel details summary { cursor: pointer; color: #555; }
+    .silhouette { filter: brightness(0) contrast(200%); }
+    @media (max-width: 400px) { .pokemon-container { width: 70vw; } input { width: 70%; } }
+    label { font-size: 0.9rem; color: #555; margin-bottom: 0.5em; }
   </style>
 </head>
 <body>
@@ -305,18 +93,10 @@
   <canvas id="confetti-canvas"></canvas>
 
   <script>
-    let gen1PokemonList = [];
-    let gen2PokemonList = [];
-    let formsPokemonList = [];
-    let pokemonList = [];
-    let currentPokemon = "";
-    let silhouetteIndex = 0;
-    let currentSuffix = "";
-
-    let streak = 0;
-    let bestStreak = localStorage.getItem("bestStreak") 
-      ? parseInt(localStorage.getItem("bestStreak")) 
-      : 0;
+    let gen1PokemonList = [], gen2PokemonList = [], formsPokemonList = [], pokemonList = [];
+    let currentPokemon = "", silhouetteIndex = 0, currentSuffix = "";
+    let streak = 0, bestStreak = localStorage.getItem("bestStreak") ? parseInt(localStorage.getItem("bestStreak")) : 0;
+    let guessed = false;
 
     const badgeEl = document.getElementById("badge");
     const pokemonImg = document.getElementById("pokemonImg");
@@ -325,7 +105,10 @@
     const guessButton = document.getElementById("guessButton");
     const nextButton = document.getElementById("nextButton");
 
-    let guessed = false;
+    // Preloading setup
+    const preloadedImages = {};
+    const preloadQueue = [];
+    const PRELOAD_COUNT = 10;
 
     async function loadPokemonList() {
       try {
@@ -335,20 +118,17 @@
           fetch("./public/forms.txt")
         ]);
 
-        const gen1Text = await gen1Res.text();
-        const gen2Text = await gen2Res.text();
-        const formsText = await formsRes.text();
-
-        gen1PokemonList = gen1Text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        gen2PokemonList = gen2Text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        formsPokemonList = formsText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        gen1PokemonList = (await gen1Res.text()).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        gen2PokemonList = (await gen2Res.text()).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        formsPokemonList = (await formsRes.text()).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
 
         updatePokemonPool();
         document.getElementById("bestStreak").textContent = bestStreak;
-        nextPokemon();
-      } catch (err) {
-        console.error("Failed to load Pokémon lists", err);
-      }
+        updatePreloadQueue();
+
+        // Display first Pokémon immediately
+        displayNextPokemon();
+      } catch(err){ console.error("Failed to load Pokémon lists", err); }
     }
 
     function updatePokemonPool() {
@@ -357,159 +137,127 @@
       const includeGen2 = document.getElementById("gen2").checked;
 
       let pool = [];
-      if (includeGen1) pool = pool.concat(gen1PokemonList);
-      if (includeGen2) pool = pool.concat(gen2PokemonList);
-      if (includeForms) pool = pool.concat(formsPokemonList);
-
+      if(includeGen1) pool = pool.concat(gen1PokemonList);
+      if(includeGen2) pool = pool.concat(gen2PokemonList);
+      if(includeForms) pool = pool.concat(formsPokemonList);
       pokemonList = pool;
+
+      // Invalidate preloaded cache
+      Object.keys(preloadedImages).forEach(k=>delete preloadedImages[k]);
+      preloadQueue.length = 0;
     }
 
-    function nextPokemon() {
-      if (!pokemonList.length) return;
+    function preloadPokemon(pokemon){
+      if(preloadedImages[pokemon]) return;
+      const silhouetteIndex = Math.floor(Math.random()*4);
+      const img = new Image();
+      img.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${silhouetteIndex}.png?cacheBust=${Date.now()}`;
+      img.onload = () => { preloadedImages[pokemon] = img; };
+    }
+
+    function updatePreloadQueue(){
+      while(preloadQueue.length < PRELOAD_COUNT && pokemonList.length>0){
+        const next = pokemonList[Math.floor(Math.random()*pokemonList.length)];
+        if(!preloadQueue.includes(next)){
+          preloadQueue.push(next);
+          preloadPokemon(next);
+        }
+      }
+    }
+
+    function displayNextPokemon(){
+      if(!pokemonList.length) return;
 
       let next;
-      do {
-        next = pokemonList[Math.floor(Math.random() * pokemonList.length)];
-      } while (next === currentPokemon && pokemonList.length > 1);
+      do { next = preloadQueue.shift() || pokemonList[Math.floor(Math.random()*pokemonList.length)]; } 
+      while(next===currentPokemon && pokemonList.length>1);
 
       currentPokemon = next;
-      silhouetteIndex = Math.floor(Math.random() * 4);
-      currentSuffix = `_${silhouetteIndex}`;
+      updatePreloadQueue();
 
-      // Hide image while loading
+      silhouetteIndex = Math.floor(Math.random()*4);
+      currentSuffix = `_${silhouetteIndex}`;
       pokemonImg.style.opacity = 0;
       pokemonImg.classList.remove("silhouette");
 
-      const newSrc = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
+      const preloaded = preloadedImages[currentPokemon];
+      const img = preloaded ? preloaded : new Image();
+      if(!preloaded) img.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?cacheBust=${Date.now()}`;
 
-      const img = new Image();
-      img.src = newSrc;
-
-      img.onload = () => {
-        pokemonImg.src = newSrc;
-        pokemonImg.classList.add("silhouette");
-        pokemonImg.style.opacity = 1;
-      };
+      img.onload = () => { pokemonImg.src = img.src; pokemonImg.classList.add("silhouette"); pokemonImg.style.opacity = 1; };
+      if(img.complete){ pokemonImg.src=img.src; pokemonImg.classList.add("silhouette"); pokemonImg.style.opacity=1; }
 
       badgeEl.style.opacity = 0;
       pokemonImg.classList.remove("shake");
       guessInput.value = "";
       guessInput.disabled = false;
       guessButton.disabled = false;
-      nextButton.textContent = "Skip";
-      pokemonNameEl.style.opacity = 0;
-      guessed = false;
+      nextButton.textContent="Skip";
+      pokemonNameEl.style.opacity=0;
+      guessed=false;
       guessInput.focus();
     }
 
-    function checkGuess() {
-      if (guessed) return;
+    // Replace previous nextPokemon() calls
+    function nextPokemon(){ displayNextPokemon(); }
 
-      const guess = guessInput.value.trim().toLowerCase();
-      if (guess === currentPokemon.toLowerCase()) {
+    function checkGuess(){
+      if(guessed) return;
+      const guess=guessInput.value.trim().toLowerCase();
+      if(guess===currentPokemon.toLowerCase()){
         pokemonImg.classList.remove("silhouette");
-        
-        streak++;
-        document.getElementById("streak").textContent = streak;
-
-        if (streak > bestStreak) {
-          bestStreak = streak;
-          localStorage.setItem("bestStreak", bestStreak);
-          document.getElementById("bestStreak").textContent = bestStreak;
-        }
-
-        badgeEl.style.opacity = 1;
-        badgeEl.classList.remove("badge");
-        void badgeEl.offsetWidth;
-        badgeEl.classList.add("badge");
-        setTimeout(() => badgeEl.style.opacity = 0, 1000);
-
+        streak++; document.getElementById("streak").textContent=streak;
+        if(streak>bestStreak){ bestStreak=streak; localStorage.setItem("bestStreak",bestStreak); document.getElementById("bestStreak").textContent=bestStreak; }
+        badgeEl.style.opacity=1; badgeEl.classList.remove("badge"); void badgeEl.offsetWidth; badgeEl.classList.add("badge"); setTimeout(()=>badgeEl.style.opacity=0,1000);
         launchConfetti();
-
-        guessInput.disabled = true;
-        guessButton.disabled = true;
-        nextButton.textContent = "Next";
-        guessed = true;
+        guessInput.disabled=true; guessButton.disabled=true; nextButton.textContent="Next"; guessed=true;
       } else {
-        streak = 0;
-        document.getElementById("streak").textContent = streak;
-        pokemonImg.classList.remove("shake");
-        void pokemonImg.offsetWidth;
-        pokemonImg.classList.add("shake");
+        streak=0; document.getElementById("streak").textContent=streak;
+        pokemonImg.classList.remove("shake"); void pokemonImg.offsetWidth; pokemonImg.classList.add("shake");
       }
     }
 
-    nextButton.addEventListener("click", () => {
-      if (!guessed && nextButton.textContent === "Skip") {
+    nextButton.addEventListener("click",()=>{
+      if(!guessed && nextButton.textContent==="Skip"){
         pokemonImg.classList.remove("silhouette");
-        pokemonNameEl.textContent = currentPokemon;
-        pokemonNameEl.style.opacity = 1;
+        pokemonNameEl.textContent=currentPokemon;
+        pokemonNameEl.style.opacity=1;
+        guessInput.disabled=true; guessButton.disabled=true; nextButton.textContent="Next"; guessed=true;
+      } else { displayNextPokemon(); }
+    });
 
-        guessInput.disabled = true;
-        guessButton.disabled = true;
-        nextButton.textContent = "Next";
-        guessed = true;
-      } else {
-        nextPokemon();
+    guessButton.addEventListener("click",checkGuess);
+    guessInput.addEventListener("keydown", e=>{ if(e.key==="Enter") checkGuess(); });
+
+    ["includeForms","gen1","gen2"].forEach(id=>{
+      document.getElementById(id).addEventListener("change", ()=>{
+        updatePokemonPool();
+        updatePreloadQueue();
+        displayNextPokemon();
+      });
+    });
+
+    document.addEventListener("DOMContentLoaded",()=>{
+      const settingsBtn=document.getElementById("settingsBtn");
+      const settingsPanel=document.getElementById("settingsPanel");
+      if(settingsBtn && settingsPanel){
+        settingsBtn.addEventListener("click",()=>{ settingsPanel.style.display=settingsPanel.style.display==="block"?"none":"block"; });
       }
-    });
-
-    guessButton.addEventListener("click", checkGuess);
-    guessInput.addEventListener("keydown", e => { if(e.key==="Enter") checkGuess(); });
-
-    document.getElementById("includeForms").addEventListener("change", () => {
-      updatePokemonPool();
-      nextPokemon();
-    });
-    document.getElementById("gen1").addEventListener("change", () => {
-      updatePokemonPool();
-      nextPokemon();
-    });
-    document.getElementById("gen2").addEventListener("change", () => {
-      updatePokemonPool();
-      nextPokemon();
-    });
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const settingsBtn = document.getElementById("settingsBtn");
-      const settingsPanel = document.getElementById("settingsPanel");
-
-      if (settingsBtn && settingsPanel) {
-        settingsBtn.addEventListener("click", () => {
-          settingsPanel.style.display =
-            settingsPanel.style.display === "block" ? "none" : "block";
-        });
-      }
-
-      badgeEl.style.opacity = 0;
+      badgeEl.style.opacity=0;
       loadPokemonList();
     });
 
     // Confetti
-    const confettiCanvas = document.getElementById("confetti-canvas");
-    const ctx = confettiCanvas.getContext("2d");
-    let confettiParticles = [];
-
-    function launchConfetti() {
-      confettiCanvas.width = window.innerWidth;
-      confettiCanvas.height = window.innerHeight;
-      confettiParticles = [];
-      for (let i=0;i<150;i++){
-        confettiParticles.push({
-          x: Math.random()*confettiCanvas.width,
-          y: Math.random()*confettiCanvas.height - confettiCanvas.height,
-          r: Math.random()*6+4,
-          d: Math.random()*30,
-          color: `hsl(${Math.random()*360}, 100%, 50%)`,
-          tilt: Math.random()*10-10,
-          tiltAngleIncremental: Math.random()*0.07+0.05
-        });
-      }
-      requestAnimationFrame(drawConfetti);
-      setTimeout(() => confettiParticles=[], 1000);
+    const confettiCanvas=document.getElementById("confetti-canvas");
+    const ctx=confettiCanvas.getContext("2d");
+    let confettiParticles=[];
+    function launchConfetti(){
+      confettiCanvas.width=window.innerWidth; confettiCanvas.height=window.innerHeight;
+      confettiParticles=[];
+      for(let i=0;i<150;i++){ confettiParticles.push({x:Math.random()*confettiCanvas.width,y:Math.random()*confettiCanvas.height-confettiCanvas.height,r:Math.random()*6+4,d:Math.random()*30,color:`hsl(${Math.random()*360},100%,50%)`,tilt:Math.random()*10-10,tiltAngleIncremental:Math.random()*0.07+0.05});}
+      requestAnimationFrame(drawConfetti); setTimeout(()=>confettiParticles=[],1000);
     }
-
-    function drawConfetti() {
+    function drawConfetti(){
       ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
       confettiParticles.forEach(p=>{
         ctx.beginPath();
@@ -518,17 +266,13 @@
         ctx.moveTo(p.x+p.tilt+p.r/4,p.y);
         ctx.lineTo(p.x+p.tilt,p.y+p.tilt+p.r/4);
         ctx.stroke();
-        p.tilt += p.tiltAngleIncremental;
-        p.y += (Math.cos(p.d)+3+p.r/2)/2;
-        if(p.y>confettiCanvas.height) p.y=-10;
+        p.tilt+=p.tiltAngleIncremental;
+        p.y+=(Math.cos(p.d)+3+p.r/2)/2;
+        if(p.y>confettiCanvas.height)p.y=-10;
       });
       if(confettiParticles.length>0) requestAnimationFrame(drawConfetti);
     }
-
-    window.addEventListener('resize', () => {
-      confettiCanvas.width = window.innerWidth;
-      confettiCanvas.height = window.innerHeight;
-    });
+    window.addEventListener('resize',()=>{ confettiCanvas.width=window.innerWidth; confettiCanvas.height=window.innerHeight; });
   </script>
 </body>
 </html>
