@@ -178,6 +178,7 @@
       gap: 0.4em;
       white-space: nowrap;
       width: fit-content;
+      margin-bottom: 0.5em;
     }
 
     .forms-toggle span {
@@ -194,7 +195,6 @@
       cursor: pointer;
       color: #555;
     }
-
 
     @media (max-width: 400px) {
       .pokemon-container {
@@ -220,10 +220,10 @@
     <div>Best: <span id="bestStreak">0</span></div>
   </div>
 
-  <button id="formsBtn" class="corner-info">Forms</button>
+  <button id="settingsBtn" class="corner-info">Settings</button>
 
-  <div id="formsPanel" class="corner-panel">
-    <h3>Forms</h3>
+  <div id="settingsPanel" class="corner-panel">
+    <h3>Settings</h3>
 
     <label class="forms-toggle">
       <input type="checkbox" id="includeForms" />
@@ -232,12 +232,26 @@
 
     <hr />
 
+    <label class="forms-toggle">
+      <input type="checkbox" id="gen1" checked />
+      <span>Generation 1</span>
+    </label>
+
+    <label class="forms-toggle">
+      <input type="checkbox" id="gen2" checked />
+      <span>Generation 2</span>
+    </label>
+
+    <hr />
+
     <details>
       <summary>Excluded forms (look too similar)</summary>
       <ul>
+        <li>Nidoran genders (just write nidoran)</li>
         <li>Alolan Grimer</li>
         <li>Alolan Muk</li>
         <li>Alolan Vulpix</li>
+        <li>Paldean Tauros</li>
       </ul>
     </details>
   </div>
@@ -257,7 +271,8 @@
   <canvas id="confetti-canvas"></canvas>
 
   <script>
-    let basePokemonList = [];
+    let gen1PokemonList = [];
+    let gen2PokemonList = [];
     let formsPokemonList = [];
     let pokemonList = [];
     let currentPokemon = "";
@@ -280,19 +295,21 @@
 
     async function loadPokemonList() {
       try {
-        const [baseRes, formsRes] = await Promise.all([
-          fetch("./public/pokemon.txt"),
+        const [gen1Res, gen2Res, formsRes] = await Promise.all([
+          fetch("./public/gen1_pokemon.txt"),
+          fetch("./public/gen2_pokemon.txt"),
           fetch("./public/forms.txt")
         ]);
 
-        const baseText = await baseRes.text();
+        const gen1Text = await gen1Res.text();
+        const gen2Text = await gen2Res.text();
         const formsText = await formsRes.text();
 
-        basePokemonList = baseText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        gen1PokemonList = gen1Text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        gen2PokemonList = gen2Text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
         formsPokemonList = formsText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
         updatePokemonPool();
-
         document.getElementById("bestStreak").textContent = bestStreak;
         nextPokemon();
       } catch (err) {
@@ -302,9 +319,15 @@
 
     function updatePokemonPool() {
       const includeForms = document.getElementById("includeForms").checked;
-      pokemonList = includeForms
-        ? [...basePokemonList, ...formsPokemonList]
-        : [...basePokemonList];
+      const includeGen1 = document.getElementById("gen1").checked;
+      const includeGen2 = document.getElementById("gen2").checked;
+
+      let pool = [];
+      if (includeGen1) pool = pool.concat(gen1PokemonList);
+      if (includeGen2) pool = pool.concat(gen2PokemonList);
+      if (includeForms) pool = pool.concat(formsPokemonList);
+
+      pokemonList = pool;
     }
 
     function nextPokemon() {
@@ -321,7 +344,6 @@
 
       pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/silhouettes/${currentPokemon}${currentSuffix}.png`;
 
-      // Reset UI
       badgeEl.style.opacity = 0;
       pokemonImg.classList.remove("shake");
       guessInput.value = "";
@@ -372,7 +394,6 @@
 
     nextButton.addEventListener("click", () => {
       if (!guessed && nextButton.textContent === "Skip") {
-        // Reveal Pokémon and name
         pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
         pokemonNameEl.textContent = currentPokemon;
         pokemonNameEl.style.opacity = 1;
@@ -393,8 +414,26 @@
       updatePokemonPool();
       nextPokemon();
     });
+    document.getElementById("gen1").addEventListener("change", () => {
+      updatePokemonPool();
+      nextPokemon();
+    });
+    document.getElementById("gen2").addEventListener("change", () => {
+      updatePokemonPool();
+      nextPokemon();
+    });
 
     document.addEventListener("DOMContentLoaded", () => {
+      const settingsBtn = document.getElementById("settingsBtn");
+      const settingsPanel = document.getElementById("settingsPanel");
+
+      if (settingsBtn && settingsPanel) {
+        settingsBtn.addEventListener("click", () => {
+          settingsPanel.style.display =
+            settingsPanel.style.display === "block" ? "none" : "block";
+        });
+      }
+
       badgeEl.style.opacity = 0;
       loadPokemonList();
     });
@@ -443,18 +482,6 @@
       confettiCanvas.width = window.innerWidth;
       confettiCanvas.height = window.innerHeight;
     });
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const formsBtn = document.getElementById("formsBtn");
-    const formsPanel = document.getElementById("formsPanel");
-
-    if (!formsBtn || !formsPanel) return;
-
-    formsBtn.addEventListener("click", () => {
-      formsPanel.style.display =
-        formsPanel.style.display === "block" ? "none" : "block";
-    });
-  });
   </script>
 </body>
 </html>
