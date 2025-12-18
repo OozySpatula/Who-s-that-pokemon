@@ -196,6 +196,10 @@
       color: #555;
     }
 
+    .silhouette {
+      filter: brightness(0) contrast(200%);
+    }
+
     @media (max-width: 400px) {
       .pokemon-container {
         width: 70vw;
@@ -343,7 +347,8 @@
       silhouetteIndex = Math.floor(Math.random() * 4);
       currentSuffix = `_${silhouetteIndex}`;
 
-      pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/silhouettes/${currentPokemon}${currentSuffix}.png`;
+      pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
+      pokemonImg.classList.add("silhouette");
 
       badgeEl.style.opacity = 0;
       pokemonImg.classList.remove("shake");
@@ -361,8 +366,8 @@
 
       const guess = guessInput.value.trim().toLowerCase();
       if (guess === currentPokemon.toLowerCase()) {
-        pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
-
+        pokemonImg.classList.remove("silhouette");
+        
         streak++;
         document.getElementById("streak").textContent = streak;
 
@@ -395,7 +400,7 @@
 
     nextButton.addEventListener("click", () => {
       if (!guessed && nextButton.textContent === "Skip") {
-        pokemonImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}${currentSuffix}.png`;
+        pokemonImg.classList.remove("silhouette");
         pokemonNameEl.textContent = currentPokemon;
         pokemonNameEl.style.opacity = 1;
 
