@@ -230,12 +230,15 @@ label {
    Excluded Forms List
    ========================= */
 .corner-panel ul {
+  display: flex;
+  flex-direction: column; /* stack items vertically */
   padding-left: 1rem;
   margin: 0.4rem 0 0;
 }
 
 .corner-panel li {
   margin-bottom: 0.3rem;
+  font-size: 0.85rem; /* default size */
 }
 
 /* =========================
@@ -249,7 +252,7 @@ label {
   z-index: 1000;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .corner-panel {
     width: 90vw;             /* Almost full width on small screens */
     right: 5vw;              /* Centered with some margin */
