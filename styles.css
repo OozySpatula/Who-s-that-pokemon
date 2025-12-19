@@ -217,19 +217,19 @@ label {
 }
 
 .forms-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.8em;
-  padding: 10px 6px;
+  gap: 0.4em;
+  padding: 0;
 }
 
 .forms-toggle input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: auto;
+  height: auto;
 }
 
 .forms-toggle span {
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 /* =========================
