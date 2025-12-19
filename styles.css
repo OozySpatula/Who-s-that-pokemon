@@ -207,16 +207,6 @@ button:hover {
 /* =========================
    Include Forms Toggle & Checklist Labels
    ========================= */
-.checklist label {
-  display: flex;           /* inline-flex also works */
-  align-items: flex-start;     /* vertically center checkbox and text */
-  gap: 0.1rem;             /* space between checkbox and label text */
-  width: auto;             /* don’t stretch */
-  white-space: nowrap;     /* prevent text wrapping */
-  cursor: pointer;
-  margin: 0;
-}
-
 .checklist {
   display: flex;
   flex-direction: column;  /* stack items vertically */
@@ -224,6 +214,22 @@ button:hover {
   gap: 0.3rem;
   padding: 0;
   margin: 0;
+}
+
+.checklist label {
+  display: flex;
+  align-items: flex-start; /* or center depending on look */
+  gap: 0.5rem;             /* optional minimal spacing */
+  line-height: 1;          /* prevents extra spacing from tall lines */
+}
+
+.checklist input[type="checkbox"] {
+  margin: 0;
+  padding: 0;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;  /* helps alignment with text */
+  -webkit-appearance: checkbox; /* ensures consistent look on iOS */
 }
 /* =========================
    Excluded Forms List
