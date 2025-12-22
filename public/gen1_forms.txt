@@ -35,6 +35,7 @@ Gigantamax Machamp
 Gigantamax Meowth
 Gigantamax Pikachu
 Gigantamax Snorlax
+Gigantamax Lapras
 Hisuian Voltorb
 Hisuian Arcanine
 Hisuian Electrode
@@ -49,7 +50,6 @@ Mega Charizard Y
 Mega Gengar
 Mega Gyarados
 Mega Kangaskhan
-Mega Lapras
 Mega Mewtwo X
 Mega Mewtwo Y
 Mega Pidgeotto
