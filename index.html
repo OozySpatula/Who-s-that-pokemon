@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Who's That Pokémon?</title>
   <script>
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = '/Who-s-that-pokemon/styles.css?ts=' + new Date().getTime(); // cache-busting
-    document.head.appendChild(cssLink);
+      const basePath = location.pathname.replace(/[^/]+$/, '');
+
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = basePath + 'styles.css?ts=' + Date.now();
+
+      document.head.appendChild(cssLink);
   </script>
 </head>
 <body>
@@ -24,23 +27,15 @@
   <div id="settingsPanel" class="corner-panel">
     <h3>Settings</h3>
 
-   
-
-  
-    
     <div class="checklist">
       <label>
-        <input type="checkbox" id="includeForms" /> Include Forms
+        <input type="checkbox" id="includeForms" />
+        Include Forms
       </label>
 
       <hr />
-      
-      <label>
-        <input type="checkbox" id="gen1" checked /> Gen 1
-      </label>
-      <label>
-        <input type="checkbox" id="gen2" checked /> Gen 2
-      </label>
+
+      <div id="genChecklist"></div>
     </div>
 
     <details>
@@ -74,11 +69,27 @@
   <canvas id="confetti-canvas"></canvas>
 
   <script>
-    let gen1PokemonList = [], gen2PokemonList = [], gen1FormsList = [], gen2FormsList = [], pokemonList = [];
-    let currentPokemon = "", silhouetteIndex = 0, currentSuffix = "";
-    let streak = 0, bestStreak = localStorage.getItem("bestStreak") ? parseInt(localStorage.getItem("bestStreak")) : 0;
+    /* ================= CONFIG ================= */
+    const MAX_GEN = 3; // ONLY CHANGE THIS TO ADD GENS
+    const PRELOAD_COUNT = 10;
+
+    /* ================= STATE ================= */
+    const pokemonByGen = {};
+    const formsByGen = {};
+    let pokemonList = [];
+    let currentPokemon = "";
+    let silhouetteIndex = 0;
+    let streak = 0;
     let guessed = false;
 
+    let bestStreak = localStorage.getItem("bestStreak")
+      ? parseInt(localStorage.getItem("bestStreak"))
+      : 0;
+
+    const preloadedImages = {};
+    const preloadQueue = [];
+
+    /* ================= ELEMENTS ================= */
     const badgeEl = document.getElementById("badge");
     const pokemonImg = document.getElementById("pokemonImg");
     const pokemonNameEl = document.getElementById("pokemonName");
@@ -86,174 +97,246 @@
     const guessButton = document.getElementById("guessButton");
     const nextButton = document.getElementById("nextButton");
 
-    const preloadedImages = {};
-    const preloadQueue = [];
-    const PRELOAD_COUNT = 10;
+    /* ================= UI ================= */
+    function renderGenCheckboxes() {
+      const container = document.getElementById("genChecklist");
 
-    async function loadPokemonList() {
-      try {
-        const [gen1Res, gen2Res, gen1FormsRes, gen2FormsRes] = await Promise.all([
-          fetch("./public/gen1_pokemon.txt"),
-          fetch("./public/gen2_pokemon.txt"),
-          fetch("./public/gen1_forms.txt"),
-          fetch("./public/gen2_forms.txt")
-        ]);
-
-        gen1PokemonList = (await gen1Res.text()).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-        gen2PokemonList = (await gen2Res.text()).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-        gen1FormsList = (await gen1FormsRes.text()).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-        gen2FormsList = (await gen2FormsRes.text()).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-
-        updatePokemonPool();
-        document.getElementById("bestStreak").textContent = bestStreak;
-        updatePreloadQueue();
-        displayNextPokemon();
-      } catch(err){ console.error("Failed to load Pokémon lists", err); }
+      for (let gen = 1; gen <= MAX_GEN; gen++) {
+        const label = document.createElement("label");
+        label.innerHTML = `
+          <input type="checkbox" id="gen${gen}" checked />
+          Gen ${gen}
+        `;
+        container.appendChild(label);
+      }
     }
 
+    /* ================= DATA LOADING ================= */
+    async function loadPokemonList() {
+      try {
+        const promises = [];
+
+        for (let gen = 1; gen <= MAX_GEN; gen++) {
+          promises.push(
+            fetch(`./public/gen${gen}_pokemon.txt`)
+              .then(r => r.text())
+              .then(t => {
+                pokemonByGen[gen] = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+              })
+          );
+
+          promises.push(
+            fetch(`./public/gen${gen}_forms.txt`)
+              .then(r => r.text())
+              .then(t => {
+                formsByGen[gen] = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+              })
+          );
+        }
+
+        await Promise.all(promises);
+
+        document.getElementById("bestStreak").textContent = bestStreak;
+        updatePokemonPool();
+        updatePreloadQueue();
+        displayNextPokemon();
+      } catch (err) {
+        console.error("Failed to load Pokémon lists", err);
+      }
+    }
+
+    /* ================= POOL ================= */
     function updatePokemonPool() {
       const includeForms = document.getElementById("includeForms").checked;
-      const includeGen1 = document.getElementById("gen1").checked;
-      const includeGen2 = document.getElementById("gen2").checked;
-
       let pool = [];
-      if(includeGen1) pool = pool.concat(gen1PokemonList);
-      if(includeGen2) pool = pool.concat(gen2PokemonList);
-      if(includeForms){
-        if(includeGen1) pool = pool.concat(gen1FormsList);
-        if(includeGen2) pool = pool.concat(gen2FormsList);
+
+      for (let gen = 1; gen <= MAX_GEN; gen++) {
+        if (document.getElementById(`gen${gen}`).checked) {
+          pool = pool.concat(pokemonByGen[gen] || []);
+          if (includeForms) pool = pool.concat(formsByGen[gen] || []);
+        }
       }
+
       pokemonList = pool;
 
-      // Clear preloaded cache on settings change
-      Object.keys(preloadedImages).forEach(k=>delete preloadedImages[k]);
+      Object.keys(preloadedImages).forEach(k => delete preloadedImages[k]);
       preloadQueue.length = 0;
     }
 
-    function preloadPokemon(pokemon){
-      if(preloadedImages[pokemon]) return;
-      const silhouetteIndex = Math.floor(Math.random()*4);
+    /* ================= PRELOADING ================= */
+    function preloadPokemon(pokemon) {
+      if (preloadedImages[pokemon]) return;
+
+      const index = Math.floor(Math.random() * 4);
       const img = new Image();
-      img.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${silhouetteIndex}.png?cacheBust=${Date.now()}`;
-      img.onload = () => { preloadedImages[pokemon] = img; };
+      img.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png?ts=${Date.now()}`;
+      img.onload = () => preloadedImages[pokemon] = img;
     }
 
-    function updatePreloadQueue(){
-      while(preloadQueue.length < PRELOAD_COUNT && pokemonList.length>0){
-        const next = pokemonList[Math.floor(Math.random()*pokemonList.length)];
-        if(!preloadQueue.includes(next)){
+    function updatePreloadQueue() {
+      while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
+        const next = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+        if (!preloadQueue.includes(next)) {
           preloadQueue.push(next);
           preloadPokemon(next);
         }
       }
     }
 
-    function displayNextPokemon(){
-      if(!pokemonList.length) return;
+    /* ================= GAME FLOW ================= */
+    function displayNextPokemon() {
+      if (!pokemonList.length) return;
 
       let next;
-      do { next = preloadQueue.shift() || pokemonList[Math.floor(Math.random()*pokemonList.length)]; } 
-      while(next===currentPokemon && pokemonList.length>1);
+      do {
+        next = preloadQueue.shift() || pokemonList[Math.floor(Math.random() * pokemonList.length)];
+      } while (next === currentPokemon && pokemonList.length > 1);
 
       currentPokemon = next;
       updatePreloadQueue();
 
-      silhouetteIndex = Math.floor(Math.random()*4);
-      currentSuffix = `_${silhouetteIndex}`;
+      silhouetteIndex = Math.floor(Math.random() * 4);
       pokemonImg.style.opacity = 0;
       pokemonImg.classList.remove("silhouette");
 
-      const preloaded = preloadedImages[currentPokemon];
-      const img = preloaded ? preloaded : new Image();
-      if(!preloaded) img.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?cacheBust=${Date.now()}`;
+      const img = preloadedImages[currentPokemon] || new Image();
+      if (!img.src) {
+        img.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
+      }
 
-      img.onload = () => { pokemonImg.src = img.src; pokemonImg.classList.add("silhouette"); pokemonImg.style.opacity = 1; };
-      if(img.complete){ pokemonImg.src=img.src; pokemonImg.classList.add("silhouette"); pokemonImg.style.opacity=1; }
+      const showImage = () => {
+        pokemonImg.src = img.src;
+        pokemonImg.classList.add("silhouette");
+        pokemonImg.style.opacity = 1;
+      };
+
+      if (img.complete) {
+        showImage();
+      } else {
+        img.onload = showImage;
+      }
 
       badgeEl.style.opacity = 0;
       pokemonImg.classList.remove("shake");
       guessInput.value = "";
       guessInput.disabled = false;
       guessButton.disabled = false;
-      nextButton.textContent="Skip";
-      pokemonNameEl.style.opacity=0;
-      guessed=false;
+      nextButton.textContent = "Skip";
+      pokemonNameEl.style.opacity = 0;
+      guessed = false;
       guessInput.focus();
     }
 
-    function nextPokemon(){ displayNextPokemon(); }
+    function checkGuess() {
+      if (guessed) return;
 
-    function checkGuess(){
-      if(guessed) return;
-      const guess=guessInput.value.trim().toLowerCase();
-      if(guess===currentPokemon.toLowerCase()){
+      if (guessInput.value.trim().toLowerCase() === currentPokemon.toLowerCase()) {
         pokemonImg.classList.remove("silhouette");
-        streak++; document.getElementById("streak").textContent=streak;
-        if(streak>bestStreak){ bestStreak=streak; localStorage.setItem("bestStreak",bestStreak); document.getElementById("bestStreak").textContent=bestStreak; }
-        badgeEl.style.opacity=1; badgeEl.classList.remove("badge"); void badgeEl.offsetWidth; badgeEl.classList.add("badge"); setTimeout(()=>badgeEl.style.opacity=0,1000);
+        streak++;
+        document.getElementById("streak").textContent = streak;
+
+        if (streak > bestStreak) {
+          bestStreak = streak;
+          localStorage.setItem("bestStreak", bestStreak);
+          document.getElementById("bestStreak").textContent = bestStreak;
+        }
+
+        badgeEl.style.opacity = 1;
+        badgeEl.classList.remove("badge");
+        void badgeEl.offsetWidth;
+        badgeEl.classList.add("badge");
+
         launchConfetti();
-        guessInput.disabled=true; guessButton.disabled=true; nextButton.textContent="Next"; guessed=true;
+
+        guessInput.disabled = true;
+        guessButton.disabled = true;
+        nextButton.textContent = "Next";
+        guessed = true;
       } else {
-        streak=0; document.getElementById("streak").textContent=streak;
-        pokemonImg.classList.remove("shake"); void pokemonImg.offsetWidth; pokemonImg.classList.add("shake");
+        streak = 0;
+        document.getElementById("streak").textContent = streak;
+        pokemonImg.classList.remove("shake");
+        void pokemonImg.offsetWidth;
+        pokemonImg.classList.add("shake");
       }
     }
 
-    nextButton.addEventListener("click",()=>{
-      if(!guessed && nextButton.textContent==="Skip"){
+    /* ================= EVENTS ================= */
+    nextButton.addEventListener("click", () => {
+      if (!guessed && nextButton.textContent === "Skip") {
         pokemonImg.classList.remove("silhouette");
-        pokemonNameEl.textContent=currentPokemon;
-        pokemonNameEl.style.opacity=1;
-        guessInput.disabled=true; guessButton.disabled=true; nextButton.textContent="Next"; guessed=true;
-      } else { displayNextPokemon(); }
+        pokemonNameEl.textContent = currentPokemon;
+        pokemonNameEl.style.opacity = 1;
+        guessInput.disabled = true;
+        guessButton.disabled = true;
+        nextButton.textContent = "Next";
+        guessed = true;
+      } else {
+        displayNextPokemon();
+      }
     });
 
-    guessButton.addEventListener("click",checkGuess);
-    guessInput.addEventListener("keydown", e=>{ if(e.key==="Enter") checkGuess(); });
+    guessButton.addEventListener("click", checkGuess);
+    guessInput.addEventListener("keydown", e => e.key === "Enter" && checkGuess());
 
-    ["includeForms","gen1","gen2"].forEach(id=>{
-      document.getElementById(id).addEventListener("change", ()=>{
+    document.addEventListener("change", e => {
+      if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
         updatePokemonPool();
         updatePreloadQueue();
         displayNextPokemon();
-      });
+      }
     });
 
-    document.addEventListener("DOMContentLoaded",()=>{
-      const settingsBtn=document.getElementById("settingsBtn");
-      const settingsPanel=document.getElementById("settingsPanel");
-      if(settingsBtn && settingsPanel){
-        settingsBtn.addEventListener("click",()=>{ settingsPanel.style.display=settingsPanel.style.display==="block"?"none":"block"; });
-      }
-      badgeEl.style.opacity=0;
+    document.addEventListener("DOMContentLoaded", () => {
+      renderGenCheckboxes();
       loadPokemonList();
+      document.getElementById("settingsBtn")
+        .addEventListener("click", () => {
+          const panel = document.getElementById("settingsPanel");
+          panel.style.display = panel.style.display === "block" ? "none" : "block";
+        });
     });
-    // Confetti
-    const confettiCanvas=document.getElementById("confetti-canvas");
-    const ctx=confettiCanvas.getContext("2d");
-    let confettiParticles=[];
-    function launchConfetti(){
-      confettiCanvas.width=window.innerWidth; confettiCanvas.height=window.innerHeight;
-      confettiParticles=[];
-      for(let i=0;i<150;i++){ confettiParticles.push({x:Math.random()*confettiCanvas.width,y:Math.random()*confettiCanvas.height-confettiCanvas.height,r:Math.random()*6+4,d:Math.random()*30,color:`hsl(${Math.random()*360},100%,50%)`,tilt:Math.random()*10-10,tiltAngleIncremental:Math.random()*0.07+0.05});}
-      requestAnimationFrame(drawConfetti); setTimeout(()=>confettiParticles=[],1000);
+
+    /* ================= CONFETTI ================= */
+    const confettiCanvas = document.getElementById("confetti-canvas");
+    const ctx = confettiCanvas.getContext("2d");
+    let confettiParticles = [];
+
+    function launchConfetti() {
+      confettiCanvas.width = innerWidth;
+      confettiCanvas.height = innerHeight;
+      confettiParticles = Array.from({ length: 150 }, () => ({
+        x: Math.random() * innerWidth,
+        y: Math.random() * -innerHeight,
+        r: Math.random() * 6 + 4,
+        d: Math.random() * 30,
+        tilt: Math.random() * 10 - 10,
+        tiltAngleIncremental: Math.random() * 0.07 + 0.05,
+        color: `hsl(${Math.random() * 360},100%,50%)`
+      }));
+      requestAnimationFrame(drawConfetti);
+      setTimeout(() => confettiParticles = [], 1000);
     }
-    function drawConfetti(){
-      ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
-      confettiParticles.forEach(p=>{
+
+    function drawConfetti() {
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      confettiParticles.forEach(p => {
         ctx.beginPath();
-        ctx.lineWidth=p.r/2;
-        ctx.strokeStyle=p.color;
-        ctx.moveTo(p.x+p.tilt+p.r/4,p.y);
-        ctx.lineTo(p.x+p.tilt,p.y+p.tilt+p.r/4);
+        ctx.lineWidth = p.r / 2;
+        ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r / 4, p.y);
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 4);
         ctx.stroke();
-        p.tilt+=p.tiltAngleIncremental;
-        p.y+=(Math.cos(p.d)+3+p.r/2)/2;
-        if(p.y>confettiCanvas.height)p.y=-10;
+        p.tilt += p.tiltAngleIncremental;
+        p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
       });
-      if(confettiParticles.length>0) requestAnimationFrame(drawConfetti);
+      if (confettiParticles.length) requestAnimationFrame(drawConfetti);
     }
-    window.addEventListener('resize',()=>{ confettiCanvas.width=window.innerWidth; confettiCanvas.height=window.innerHeight; });
+
+    window.addEventListener("resize", () => {
+      confettiCanvas.width = innerWidth;
+      confettiCanvas.height = innerHeight;
+    });
   </script>
 </body>
 </html>
