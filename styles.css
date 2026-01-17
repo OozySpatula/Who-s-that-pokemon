@@ -261,3 +261,22 @@ button:hover {
 .forms-toggle span {
   font-size: 0.85rem;
 }
+
+/* Awesomplete dropdown above input */
+.awesomplete {
+  position: relative; /* relative parent for dropdown */
+}
+
+.awesomplete ul {
+  top: auto !important;  /* ignore default below */
+  bottom: 100%;          /* appear above input */
+  left: 0;
+  width: 100%;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 2000;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  border-radius: 5px;
+  background: #fff;
+  margin-bottom: 4px; /* gap above input */
+}
