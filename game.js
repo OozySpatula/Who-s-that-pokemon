@@ -1,8 +1,7 @@
-// game.js
 import confetti from 'https://cdn.skypack.dev/canvas-confetti';
 
 /* ================= CONFIG ================= */
-const MAX_GEN = 3; // ONLY CHANGE THIS TO ADD GENS
+const MAX_GEN = 3;
 const PRELOAD_COUNT = 10;
 
 /* ================= STATE ================= */
@@ -13,6 +12,7 @@ let currentPokemon = "";
 let silhouetteIndex = 0;
 let streak = 0;
 let guessed = false;
+let awesompleteInstance = null;
 
 let bestStreak = localStorage.getItem("bestStreak")
   ? parseInt(localStorage.getItem("bestStreak"))
@@ -32,7 +32,6 @@ const nextButton = document.getElementById("nextButton");
 /* ================= UI ================= */
 function renderGenCheckboxes() {
   const container = document.getElementById("genChecklist");
-
   for (let gen = 1; gen <= MAX_GEN; gen++) {
     const label = document.createElement("label");
     label.innerHTML = `
@@ -47,7 +46,6 @@ function renderGenCheckboxes() {
 async function loadPokemonList() {
   try {
     const promises = [];
-
     for (let gen = 1; gen <= MAX_GEN; gen++) {
       promises.push(
         fetch(`./public/gen${gen}_pokemon.txt`)
@@ -56,7 +54,6 @@ async function loadPokemonList() {
             pokemonByGen[gen] = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
           })
       );
-
       promises.push(
         fetch(`./public/gen${gen}_forms.txt`)
           .then(r => r.text())
@@ -65,9 +62,7 @@ async function loadPokemonList() {
           })
       );
     }
-
     await Promise.all(promises);
-
     document.getElementById("bestStreak").textContent = bestStreak;
     updatePokemonPool();
     updatePreloadQueue();
@@ -81,24 +76,21 @@ async function loadPokemonList() {
 function updatePokemonPool() {
   const includeForms = document.getElementById("includeForms").checked;
   let pool = [];
-
   for (let gen = 1; gen <= MAX_GEN; gen++) {
     if (document.getElementById(`gen${gen}`).checked) {
       pool = pool.concat(pokemonByGen[gen] || []);
       if (includeForms) pool = pool.concat(formsByGen[gen] || []);
     }
   }
-
   pokemonList = pool;
-
   Object.keys(preloadedImages).forEach(k => delete preloadedImages[k]);
   preloadQueue.length = 0;
+  setupAwesomplete();
 }
 
 /* ================= PRELOADING ================= */
 function preloadPokemon(pokemon) {
   if (preloadedImages[pokemon]) return;
-
   const index = Math.floor(Math.random() * 4);
   const img = new Image();
   img.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png?ts=${Date.now()}`;
@@ -118,35 +110,25 @@ function updatePreloadQueue() {
 /* ================= GAME FLOW ================= */
 function displayNextPokemon() {
   if (!pokemonList.length) return;
-
   let next;
   do {
     next = preloadQueue.shift() || pokemonList[Math.floor(Math.random() * pokemonList.length)];
   } while (next === currentPokemon && pokemonList.length > 1);
-
   currentPokemon = next;
   updatePreloadQueue();
-
   silhouetteIndex = Math.floor(Math.random() * 4);
   pokemonImg.style.opacity = 0;
   pokemonImg.classList.remove("silhouette");
-
   const img = preloadedImages[currentPokemon] || new Image();
   if (!img.src) {
     img.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
   }
-
   const showImage = () => {
     pokemonImg.src = img.src;
     pokemonImg.classList.add("silhouette");
     pokemonImg.style.opacity = 1;
   };
-
-  if (img.complete) {
-    showImage();
-  } else {
-    img.onload = showImage;
-  }
+  if (img.complete) showImage(); else img.onload = showImage;
 
   badgeEl.style.opacity = 0;
   pokemonImg.classList.remove("shake");
@@ -159,27 +141,23 @@ function displayNextPokemon() {
   guessInput.focus();
 }
 
+/* ================= CHECK GUESS ================= */
 function checkGuess() {
   if (guessed) return;
-
   if (guessInput.value.trim().toLowerCase() === currentPokemon.toLowerCase()) {
     pokemonImg.classList.remove("silhouette");
     streak++;
     document.getElementById("streak").textContent = streak;
-
     if (streak > bestStreak) {
       bestStreak = streak;
       localStorage.setItem("bestStreak", bestStreak);
       document.getElementById("bestStreak").textContent = bestStreak;
     }
-
     badgeEl.style.opacity = 1;
     badgeEl.classList.remove("badge");
     void badgeEl.offsetWidth;
     badgeEl.classList.add("badge");
-
     launchConfetti();
-
     guessInput.disabled = true;
     guessButton.disabled = true;
     nextButton.textContent = "Next";
@@ -195,11 +173,38 @@ function checkGuess() {
 
 /* ================= CONFETTI ================= */
 function launchConfetti() {
-  confetti({
-    particleCount: 150,
-    spread: 70,
-    origin: { y: 0.6 }
-  });
+  confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+}
+
+/* ================= AUTOCOMPLETE ================= */
+function setupAwesomplete() {
+  const enabled = document.getElementById("enableAutocomplete").checked;
+  if (!enabled) {
+    if (awesompleteInstance) {
+      awesompleteInstance.destroy();
+      awesompleteInstance = null;
+      guessInput.removeAttribute("list");
+    }
+    return;
+  }
+
+  const list = pokemonList.slice().sort();
+
+  if (!awesompleteInstance) {
+    awesompleteInstance = new Awesomplete(guessInput, {
+      list,
+      minChars: 1,
+      maxItems: 8,
+      autoFirst: true
+    });
+  } else {
+    awesompleteInstance.list = list;
+  }
+
+  // Force dropdown to appear above the input
+  const dropdown = awesompleteInstance.ul;
+  dropdown.style.bottom = `${guessInput.offsetHeight + 4}px`; // 4px gap
+  dropdown.style.top = "auto";
 }
 
 /* ================= EVENTS ================= */
@@ -212,16 +217,18 @@ nextButton.addEventListener("click", () => {
     guessButton.disabled = true;
     nextButton.textContent = "Next";
     guessed = true;
-  } else {
-    displayNextPokemon();
-  }
+  } else displayNextPokemon();
 });
 
 guessButton.addEventListener("click", checkGuess);
 guessInput.addEventListener("keydown", e => e.key === "Enter" && checkGuess());
 
 document.addEventListener("change", e => {
-  if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
+  if (
+    e.target.id === "includeForms" ||
+    /^gen\d+$/.test(e.target.id) ||
+    e.target.id === "enableAutocomplete"
+  ) {
     updatePokemonPool();
     updatePreloadQueue();
     displayNextPokemon();
@@ -231,9 +238,8 @@ document.addEventListener("change", e => {
 document.addEventListener("DOMContentLoaded", () => {
   renderGenCheckboxes();
   loadPokemonList();
-  document.getElementById("settingsBtn")
-    .addEventListener("click", () => {
-      const panel = document.getElementById("settingsPanel");
-      panel.style.display = panel.style.display === "block" ? "none" : "block";
-    });
+  document.getElementById("settingsBtn").addEventListener("click", () => {
+    const panel = document.getElementById("settingsPanel");
+    panel.style.display = panel.style.display === "block" ? "none" : "block";
+  });
 });
