@@ -195,7 +195,8 @@ function setupAwesomplete() {
       list,
       minChars: 1,
       maxItems: 8,
-      autoFirst: true
+      autoFirst: true,
+      filter: Awesomplete.FILTER_STARTSWITH,
     });
   } else {
     awesompleteInstance.list = list;
