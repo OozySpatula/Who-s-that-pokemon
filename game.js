@@ -196,15 +196,15 @@ function setupAwesomplete() {
       minChars: 1,
       maxItems: 8,
       autoFirst: true,
-      filter: Awesomplete.FILTER_STARTSWITH,
+      filter: Awesomplete.FILTER_STARTSWITH, // built-in starts-with filter
     });
   } else {
     awesompleteInstance.list = list;
   }
 
-  // Force dropdown to appear above the input
+  // Force dropdown above input
   const dropdown = awesompleteInstance.ul;
-  dropdown.style.bottom = `${guessInput.offsetHeight + 4}px`; // 4px gap
+  dropdown.style.bottom = `${guessInput.offsetHeight + 4}px`;
   dropdown.style.top = "auto";
 }
 
@@ -225,14 +225,14 @@ guessButton.addEventListener("click", checkGuess);
 guessInput.addEventListener("keydown", e => e.key === "Enter" && checkGuess());
 
 document.addEventListener("change", e => {
-  if (
-    e.target.id === "includeForms" ||
-    /^gen\d+$/.test(e.target.id) ||
-    e.target.id === "enableAutocomplete"
-  ) {
+  if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
+    // changing forms or generations still updates pool + preload
     updatePokemonPool();
     updatePreloadQueue();
     displayNextPokemon();
+  } else if (e.target.id === "enableAutocomplete") {
+    // ONLY toggle autocomplete; do not reset streak or load a new Pokémon
+    setupAwesomplete();
   }
 });
 
