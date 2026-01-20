@@ -222,7 +222,16 @@ nextButton.addEventListener("click", () => {
 });
 
 guessButton.addEventListener("click", checkGuess);
-guessInput.addEventListener("keydown", e => e.key === "Enter" && checkGuess());
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+
+  // If already guessed, Enter acts like "Next"
+  if (guessed) {
+    displayNextPokemon();
+  } else {
+    checkGuess();
+  }
+});
 
 document.addEventListener("change", e => {
   if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
