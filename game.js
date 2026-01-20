@@ -193,6 +193,31 @@ function updatePreloadQueue() {
   }
 }
 
+/* ================= SILHOUETTE HELPERS ================= */
+function createSilhouetteDataURL(img) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+
+  ctx.drawImage(img, 0, 0);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] > 0) { // preserve alpha
+      data[i] = 0;
+      data[i + 1] = 0;
+      data[i + 2] = 0;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 /* ================= GAME FLOW ================= */
 function displayNextPokemon() {
   if (!pokemonList.length) return;
@@ -219,14 +244,22 @@ function displayNextPokemon() {
     img.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
   }
 
-  const showImage = () => {
-    pokemonImg.src = img.src;
+  const showSilhouette = () => {
+    // Store the real image src for later
+    pokemonImg.dataset.realSrc = img.src;
+
+    // Generate silhouette and set src AFTER it's ready
+    const silhouetteDataUrl = createSilhouetteDataURL(img);
+
+    // Only now update the <img> src
+    pokemonImg.src = silhouetteDataUrl;
     pokemonImg.classList.add("silhouette");
     pokemonImg.style.opacity = 1;
   };
 
-  if (img.complete) showImage();
-  else img.onload = showImage;
+
+  if (img.complete) showSilhouette();
+  else img.onload = showSilhouette;
 
   badgeEl.style.opacity = 0;
   pokemonImg.classList.remove("shake");
@@ -244,7 +277,10 @@ function checkGuess() {
   if (guessed) return;
 
   if (guessInput.value.trim().toLowerCase() === currentPokemon.toLowerCase()) {
+    // Reveal Pokémon
+    pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
+
     streak++;
     document.getElementById("streak").textContent = streak;
 
@@ -333,6 +369,8 @@ guessInput.addEventListener("input", () => {
 
 nextButton.addEventListener("click", () => {
   if (!guessed && nextButton.textContent === "Skip") {
+    // Reveal Pokémon
+    pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
     pokemonNameEl.textContent = currentPokemon;
     pokemonNameEl.style.opacity = 1;
