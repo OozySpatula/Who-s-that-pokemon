@@ -21,6 +21,53 @@ let bestStreak = localStorage.getItem("bestStreak")
 const preloadedImages = {};
 const preloadQueue = [];
 
+/* ================= SETTINGS ================= */
+const SETTINGS_KEY = "pokemonGuessSettings";
+
+function saveSettings() {
+  const settings = {
+    includeForms: document.getElementById("includeForms").checked,
+    enableAutocomplete: document.getElementById("enableAutocomplete").checked,
+    gens: {}
+  };
+
+  for (let gen = 1; gen <= MAX_GEN; gen++) {
+    const cb = document.getElementById(`gen${gen}`);
+    if (cb) settings.gens[gen] = cb.checked;
+  }
+
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function loadSettings() {
+  const raw = localStorage.getItem(SETTINGS_KEY);
+  if (!raw) return;
+
+  try {
+    const settings = JSON.parse(raw);
+
+    if ("includeForms" in settings) {
+      document.getElementById("includeForms").checked = settings.includeForms;
+    }
+
+    if ("enableAutocomplete" in settings) {
+      document.getElementById("enableAutocomplete").checked =
+        settings.enableAutocomplete;
+    }
+
+    if (settings.gens) {
+      for (let gen = 1; gen <= MAX_GEN; gen++) {
+        const cb = document.getElementById(`gen${gen}`);
+        if (cb && gen in settings.gens) {
+          cb.checked = settings.gens[gen];
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load settings", e);
+  }
+}
+
 /* ================= ELEMENTS ================= */
 const badgeEl = document.getElementById("badge");
 const pokemonImg = document.getElementById("pokemonImg");
@@ -257,21 +304,25 @@ document.addEventListener("keydown", e => {
 
 document.addEventListener("change", e => {
   if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
-    // changing forms or generations still updates pool + preload
+    saveSettings();
     updatePokemonPool();
     updatePreloadQueue();
     displayNextPokemon();
-  } else if (e.target.id === "enableAutocomplete") {
-    // ONLY toggle autocomplete; do not reset streak or load a new Pokémon
-    setupAwesomplete();
+  } 
+  else if (e.target.id === "enableAutocomplete") {
+    saveSettings(); 
+    setupAwesomplete();   
   }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
   renderGenCheckboxes();
+  loadSettings();
   loadPokemonList();
+
   document.getElementById("settingsBtn").addEventListener("click", () => {
     const panel = document.getElementById("settingsPanel");
     panel.style.display = panel.style.display === "block" ? "none" : "block";
   });
 });
+
