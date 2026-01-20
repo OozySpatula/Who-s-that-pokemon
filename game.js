@@ -209,6 +209,28 @@ function setupAwesomplete() {
 }
 
 /* ================= EVENTS ================= */
+guessInput.addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  if (!awesompleteInstance) return;
+
+  if (!guessInput.value.trim()) return;
+
+  const ul = awesompleteInstance.ul;
+  if (!ul || !ul.childNodes.length) return;
+
+  const selected = ul.querySelector("li[aria-selected='true']");
+  if (!selected) return;
+
+  e.preventDefault();
+  awesompleteInstance.select(selected);
+});
+
+guessInput.addEventListener("input", () => {
+  if (!guessInput.value && awesompleteInstance) {
+    awesompleteInstance.close();
+  }
+});
+
 nextButton.addEventListener("click", () => {
   if (!guessed && nextButton.textContent === "Skip") {
     pokemonImg.classList.remove("silhouette");
