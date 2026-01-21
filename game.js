@@ -19,15 +19,14 @@ let bestStreak = localStorage.getItem("bestStreak")
   ? parseInt(localStorage.getItem("bestStreak"))
   : 0;
 
-/**
- * preloadedImages[pokemon][index] = { full: Image, silhouette: Image }
- */
+/* Preloaded images */
 const preloadedImages = {};
-const preloadQueue = [];
 
-/**
- * usedImagesThisSession[pokemon] = Set(index)
- */
+/* Sequential preload queue */
+const preloadQueue = [];
+let isPreloading = false;
+
+/* Used images tracking */
 const usedImagesThisSession = {};
 
 /* ================= SETTINGS ================= */
@@ -39,47 +38,32 @@ function saveSettings() {
     enableAutocomplete: document.getElementById("enableAutocomplete").checked,
     gens: {}
   };
-
   for (let gen = 1; gen <= MAX_GEN; gen++) {
     const cb = document.getElementById(`gen${gen}`);
     if (cb) settings.gens[gen] = cb.checked;
   }
-
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function loadSettings() {
   const raw = localStorage.getItem(SETTINGS_KEY);
   if (!raw) return;
-
   try {
     const settings = JSON.parse(raw);
-
-    if ("includeForms" in settings) {
-      document.getElementById("includeForms").checked = settings.includeForms;
-    }
-
-    if ("enableAutocomplete" in settings) {
-      document.getElementById("enableAutocomplete").checked =
-        settings.enableAutocomplete;
-    }
-
+    document.getElementById("includeForms").checked = settings.includeForms ?? true;
+    document.getElementById("enableAutocomplete").checked = settings.enableAutocomplete ?? true;
     if (settings.gens) {
       for (let gen = 1; gen <= MAX_GEN; gen++) {
         const cb = document.getElementById(`gen${gen}`);
-        if (cb && gen in settings.gens) {
-          cb.checked = settings.gens[gen];
-        }
+        if (cb && gen in settings.gens) cb.checked = settings.gens[gen];
       }
     }
-  } catch (e) {
-    console.warn("Failed to load settings", e);
-  }
+  } catch (e) { console.warn("Failed to load settings", e); }
 }
 
 /* ================= ELEMENTS ================= */
 const badgeEl = document.getElementById("badge");
-const pokemonImg = document.getElementById("pokemonImg");
+let pokemonImg = document.getElementById("pokemonImg");
 const pokemonNameEl = document.getElementById("pokemonName");
 const guessInput = document.getElementById("guess");
 const guessButton = document.getElementById("guessButton");
@@ -106,26 +90,28 @@ async function loadPokemonList() {
       promises.push(
         fetch(`./public/gen${gen}_pokemon.txt`)
           .then(r => r.text())
-          .then(t => {
-            pokemonByGen[gen] = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-          })
+          .then(t => { pokemonByGen[gen] = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean); })
       );
       promises.push(
         fetch(`./public/gen${gen}_forms.txt`)
           .then(r => r.text())
-          .then(t => {
-            formsByGen[gen] = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-          })
+          .then(t => { formsByGen[gen] = t.split(/\r?\n/).map(l => l.trim()).filter(Boolean); })
       );
     }
     await Promise.all(promises);
     document.getElementById("bestStreak").textContent = bestStreak;
     updatePokemonPool();
-    displayNextPokemon(); // display first Pokémon immediately
-    updatePreloadQueueAsync(); // preload the rest asynchronously
-  } catch (err) {
-    console.error("Failed to load Pokémon lists", err);
-  }
+
+    // Preload first Pokémon fully to prevent flicker
+    const firstPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+    const firstIndex = getUnusedImageIndex(firstPokemon);
+    await preloadSinglePokemon(firstPokemon, firstIndex);
+
+    currentPokemon = firstPokemon;
+    silhouetteIndex = firstIndex;
+    displayPreloadedPokemon(firstPokemon, firstIndex);
+    updatePreloadQueueSequential(); // preload the rest
+  } catch (err) { console.error("Failed to load Pokémon lists", err); }
 }
 
 /* ================= POOL ================= */
@@ -142,128 +128,87 @@ function updatePokemonPool() {
 
   Object.keys(preloadedImages).forEach(k => delete preloadedImages[k]);
   preloadQueue.length = 0;
-
   setupAwesomplete();
 }
 
 /* ================= IMAGE INDEX LOGIC ================= */
 function getUnusedImageIndex(pokemon) {
-  if (!usedImagesThisSession[pokemon]) {
-    usedImagesThisSession[pokemon] = new Set();
-  }
-
+  if (!usedImagesThisSession[pokemon]) usedImagesThisSession[pokemon] = new Set();
   const used = usedImagesThisSession[pokemon];
-
-  if (used.size >= IMAGES_PER_POKEMON) {
-    used.clear();
-  }
-
+  if (used.size >= IMAGES_PER_POKEMON) used.clear();
   let index;
-  do {
-    index = Math.floor(Math.random() * IMAGES_PER_POKEMON);
-  } while (used.has(index));
-
+  do { index = Math.floor(Math.random() * IMAGES_PER_POKEMON); } while (used.has(index));
   used.add(index);
   return index;
 }
 
-/* ================= SILHOUETTE HELPERS ================= */
+/* ================= SILHOUETTE HELPER ================= */
 function createSilhouetteDataURL(img) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-
   canvas.width = img.naturalWidth;
   canvas.height = img.naturalHeight;
-
   ctx.drawImage(img, 0, 0);
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] > 0) {
-      data[i] = 0;
-      data[i + 1] = 0;
-      data[i + 2] = 0;
-    }
-  }
-
-  ctx.putImageData(imageData, 0, 0);
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 0) { data[i]=0; data[i+1]=0; data[i+2]=0; }
+  ctx.putImageData(new ImageData(data, canvas.width, canvas.height), 0, 0);
   return canvas.toDataURL("image/png");
 }
 
-/* ================= PRELOADING ================= */
-function preloadPokemon(pokemon, index) {
+/* ================= PRELOAD SINGLE ================= */
+function preloadSinglePokemon(pokemon, index) {
   if (!preloadedImages[pokemon]) preloadedImages[pokemon] = {};
-  if (preloadedImages[pokemon][index]) return;
+  if (preloadedImages[pokemon][index]) return Promise.resolve();
 
-  const fullImg = new Image();
-  fullImg.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png?ts=${Date.now()}`;
-  fullImg.onload = () => {
-    const silhouetteDataUrl = createSilhouetteDataURL(fullImg);
-    const silhouetteImg = new Image();
-    silhouetteImg.src = silhouetteDataUrl;
-    preloadedImages[pokemon][index] = { full: fullImg, silhouette: silhouetteImg };
-  };
+  return new Promise(resolve => {
+    const fullImg = new Image();
+    fullImg.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png`;
+    fullImg.onload = () => {
+      const silhouetteImg = new Image();
+      silhouetteImg.src = createSilhouetteDataURL(fullImg);
+      preloadedImages[pokemon][index] = { full: fullImg, silhouette: silhouetteImg };
+      resolve();
+    };
+    fullImg.onerror = resolve;
+  });
 }
 
-function updatePreloadQueueAsync() {
-  // Preload the rest asynchronously in background
-  setTimeout(() => {
-    while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
-      const pokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
-      if (!preloadQueue.includes(pokemon)) {
-        preloadQueue.push(pokemon);
-        for (let i = 0; i < IMAGES_PER_POKEMON; i++) {
-          preloadPokemon(pokemon, i);
-        }
-      }
-    }
-  }, 0);
-}
+/* ================= SEQUENTIAL PRELOADING ================= */
+async function preloadPokemonSequentially() {
+  if (isPreloading) return;
+  isPreloading = true;
 
-/* ================= GAME FLOW ================= */
-function displayNextPokemon() {
-  if (!pokemonList.length) return;
-
-  let next;
-  do {
-    next =
-      preloadQueue.shift() ||
-      pokemonList[Math.floor(Math.random() * pokemonList.length)];
-  } while (next === currentPokemon && pokemonList.length > 1);
-
-  currentPokemon = next;
-  updatePreloadQueueAsync();
-
-  silhouetteIndex = getUnusedImageIndex(currentPokemon);
-  pokemonImg.style.opacity = 0;
-
-  // Immediately show the full image with CSS black silhouette
-  const immediateImg = new Image();
-  immediateImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
-  immediateImg.onload = () => {
-    pokemonImg.dataset.realSrc = immediateImg.src; // store real src
-    pokemonImg.src = immediateImg.src;
-    pokemonImg.classList.add("silhouette"); // CSS blacked out
-    pokemonImg.style.opacity = 1;
-  };
-
-  // Preload the real silhouette in the background
-  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
-  if (!preloaded) {
-    preloadPokemon(currentPokemon, silhouetteIndex);
-    const checkReady = setInterval(() => {
-      const p = preloadedImages[currentPokemon]?.[silhouetteIndex];
-      if (p?.silhouette?.complete) {
-        pokemonImg.src = p.silhouette.src; // swap to real silhouette
-        clearInterval(checkReady);
-      }
-    }, 100);
-  } else if (preloaded.silhouette?.complete) {
-    // swap immediately if already loaded
-    pokemonImg.src = preloaded.silhouette.src;
+  while (preloadQueue.length > 0) {
+    const { pokemon, index } = preloadQueue.shift();
+    await preloadSinglePokemon(pokemon, index);
   }
+  isPreloading = false;
+}
+
+function updatePreloadQueueSequential() {
+  while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
+    const pokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+    const index = getUnusedImageIndex(pokemon);
+    preloadQueue.push({ pokemon, index });
+  }
+  preloadPokemonSequentially();
+}
+
+/* ================= DISPLAY PRELOADED ================= */
+function displayPreloadedPokemon(pokemon, index) {
+  const preloaded = preloadedImages[pokemon]?.[index];
+  if (!preloaded) return;
+
+  const clone = preloaded.silhouette.cloneNode();
+  clone.dataset.realSrc = preloaded.full.src;
+  clone.classList.add("silhouette");
+  clone.style.opacity = 0;
+  clone.style.transition = "opacity 0.05s ease-in";
+  pokemonImg.replaceWith(clone);
+  pokemonImg = clone;
+
+  // Fade in
+  requestAnimationFrame(() => { pokemonImg.style.opacity = 1; });
 
   badgeEl.style.opacity = 0;
   pokemonImg.classList.remove("shake");
@@ -274,144 +219,97 @@ function displayNextPokemon() {
   pokemonNameEl.style.opacity = 0;
   guessed = false;
   guessInput.focus();
-};
+}
+
+/* ================= DISPLAY NEXT ================= */
+function displayNextPokemon() {
+  if (!pokemonList.length) return;
+
+  let next;
+  do {
+    next = preloadQueue.shift()?.pokemon || pokemonList[Math.floor(Math.random() * pokemonList.length)];
+  } while (next === currentPokemon && pokemonList.length > 1);
+
+  currentPokemon = next;
+  silhouetteIndex = getUnusedImageIndex(currentPokemon);
+  updatePreloadQueueSequential();
+
+  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
+  if (preloaded?.silhouette) {
+    displayPreloadedPokemon(currentPokemon, silhouetteIndex);
+  } else {
+    preloadSinglePokemon(currentPokemon, silhouetteIndex).then(() => {
+      displayPreloadedPokemon(currentPokemon, silhouetteIndex);
+    });
+  }
+}
 
 /* ================= CHECK GUESS ================= */
 function checkGuess() {
   if (guessed) return;
-
   if (guessInput.value.trim().toLowerCase() === currentPokemon.toLowerCase()) {
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
-
     streak++;
     document.getElementById("streak").textContent = streak;
-
     if (streak > bestStreak) {
       bestStreak = streak;
       localStorage.setItem("bestStreak", bestStreak);
       document.getElementById("bestStreak").textContent = bestStreak;
     }
-
     badgeEl.style.opacity = 1;
-    badgeEl.classList.remove("badge");
-    void badgeEl.offsetWidth;
-    badgeEl.classList.add("badge");
-    launchConfetti();
-
-    guessInput.disabled = true;
-    guessButton.disabled = true;
-    nextButton.textContent = "Next";
-    guessed = true;
+    badgeEl.classList.remove("badge"); void badgeEl.offsetWidth; badgeEl.classList.add("badge");
+    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    guessInput.disabled = true; guessButton.disabled = true; nextButton.textContent = "Next"; guessed = true;
   } else {
     streak = 0;
     document.getElementById("streak").textContent = streak;
-    pokemonImg.classList.remove("shake");
-    void pokemonImg.offsetWidth;
-    pokemonImg.classList.add("shake");
+    pokemonImg.classList.remove("shake"); void pokemonImg.offsetWidth; pokemonImg.classList.add("shake");
   }
-}
-
-/* ================= CONFETTI ================= */
-function launchConfetti() {
-  confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
 }
 
 /* ================= AUTOCOMPLETE ================= */
 function setupAwesomplete() {
   const enabled = document.getElementById("enableAutocomplete").checked;
-
-  if (!enabled) {
-    if (awesompleteInstance) {
-      awesompleteInstance.destroy();
-      awesompleteInstance = null;
-      guessInput.removeAttribute("list");
-    }
-    return;
-  }
-
+  if (!enabled) { if (awesompleteInstance) { awesompleteInstance.destroy(); awesompleteInstance=null; guessInput.removeAttribute("list"); } return; }
   const list = pokemonList.slice().sort();
-
   if (!awesompleteInstance) {
-    awesompleteInstance = new Awesomplete(guessInput, {
-      list,
-      minChars: 1,
-      maxItems: 8,
-      autoFirst: true,
-      filter: Awesomplete.FILTER_STARTSWITH
-    });
-  } else {
-    awesompleteInstance.list = list;
-  }
-
-  const dropdown = awesompleteInstance.ul;
-  dropdown.style.bottom = `${guessInput.offsetHeight + 4}px`;
-  dropdown.style.top = "auto";
+    awesompleteInstance = new Awesomplete(guessInput, { list, minChars:1, maxItems:8, autoFirst:true, filter: Awesomplete.FILTER_STARTSWITH });
+  } else { awesompleteInstance.list = list; }
+  const dropdown = awesompleteInstance.ul; dropdown.style.bottom = `${guessInput.offsetHeight+4}px`; dropdown.style.top = "auto";
 }
 
 /* ================= EVENTS ================= */
 guessInput.addEventListener("keydown", e => {
-  if (e.key !== "Tab") return;
-  if (!awesompleteInstance) return;
-
-  const ul = awesompleteInstance.ul;
-  if (!ul?.childNodes.length) return;
-
-  const selected = ul.querySelector("li[aria-selected='true']");
+  if (e.key !== "Tab" || !awesompleteInstance) return;
+  const selected = awesompleteInstance.ul.querySelector("li[aria-selected='true']");
   if (!selected) return;
-
-  e.preventDefault();
-  awesompleteInstance.select(selected);
+  e.preventDefault(); awesompleteInstance.select(selected);
 });
-
-guessInput.addEventListener("input", () => {
-  if (!guessInput.value && awesompleteInstance) {
-    awesompleteInstance.close();
-  }
-});
-
+guessInput.addEventListener("input", () => { if (!guessInput.value && awesompleteInstance) awesompleteInstance.close(); });
 nextButton.addEventListener("click", () => {
-  if (!guessed && nextButton.textContent === "Skip") {
+  if (!guessed && nextButton.textContent==="Skip") {
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
     pokemonNameEl.textContent = currentPokemon;
     pokemonNameEl.style.opacity = 1;
-    guessInput.disabled = true;
-    guessButton.disabled = true;
-    nextButton.textContent = "Next";
-    guessed = true;
-  } else {
-    displayNextPokemon();
-  }
+    guessInput.disabled = true; guessButton.disabled = true; nextButton.textContent="Next"; guessed=true;
+  } else displayNextPokemon();
 });
-
 guessButton.addEventListener("click", checkGuess);
-
-document.addEventListener("keydown", e => {
-  if (e.key !== "Enter") return;
-  guessed ? displayNextPokemon() : checkGuess();
-});
+document.addEventListener("keydown", e => { if(e.key==="Enter") guessed ? displayNextPokemon() : checkGuess(); });
 
 document.addEventListener("change", e => {
-  if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
-    saveSettings();
-    updatePokemonPool();
-    updatePreloadQueueAsync();
-    displayNextPokemon();
-  } else if (e.target.id === "enableAutocomplete") {
-    saveSettings();
-    setupAwesomplete();
-  }
+  if(e.target.id==="includeForms" || /^gen\d+$/.test(e.target.id)) { saveSettings(); updatePokemonPool(); updatePreloadQueueSequential(); displayNextPokemon(); }
+  else if(e.target.id==="enableAutocomplete") { saveSettings(); setupAwesomplete(); }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
   renderGenCheckboxes();
   loadSettings();
   loadPokemonList();
-
   document.getElementById("settingsBtn").addEventListener("click", () => {
     const panel = document.getElementById("settingsPanel");
-    panel.style.display =
-      panel.style.display === "block" ? "none" : "block";
+    panel.style.display = panel.style.display==="block" ? "none" : "block";
   });
 });
