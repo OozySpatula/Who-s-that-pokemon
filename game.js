@@ -121,8 +121,8 @@ async function loadPokemonList() {
     await Promise.all(promises);
     document.getElementById("bestStreak").textContent = bestStreak;
     updatePokemonPool();
-    updatePreloadQueue();
-    displayNextPokemon();
+    displayNextPokemon(); // display first Pokémon immediately
+    updatePreloadQueueAsync(); // preload the rest asynchronously
   } catch (err) {
     console.error("Failed to load Pokémon lists", err);
   }
@@ -207,16 +207,19 @@ function preloadPokemon(pokemon, index) {
   };
 }
 
-function updatePreloadQueue() {
-  while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
-    const pokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
-    if (!preloadQueue.includes(pokemon)) {
-      preloadQueue.push(pokemon);
-      for (let i = 0; i < IMAGES_PER_POKEMON; i++) {
-        preloadPokemon(pokemon, i);
+function updatePreloadQueueAsync() {
+  // Preload the rest asynchronously in background
+  setTimeout(() => {
+    while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
+      const pokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+      if (!preloadQueue.includes(pokemon)) {
+        preloadQueue.push(pokemon);
+        for (let i = 0; i < IMAGES_PER_POKEMON; i++) {
+          preloadPokemon(pokemon, i);
+        }
       }
     }
-  }
+  }, 0);
 }
 
 /* ================= GAME FLOW ================= */
@@ -231,7 +234,7 @@ function displayNextPokemon() {
   } while (next === currentPokemon && pokemonList.length > 1);
 
   currentPokemon = next;
-  updatePreloadQueue();
+  updatePreloadQueueAsync();
 
   silhouetteIndex = getUnusedImageIndex(currentPokemon);
   pokemonImg.style.opacity = 0;
@@ -239,6 +242,7 @@ function displayNextPokemon() {
 
   const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
 
+  // If silhouette exists, show it immediately; otherwise show full image and generate silhouette asynchronously
   if (preloaded?.silhouette?.complete) {
     pokemonImg.dataset.realSrc = preloaded.full.src;
     pokemonImg.src = preloaded.silhouette.src;
@@ -389,7 +393,7 @@ document.addEventListener("change", e => {
   if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
     saveSettings();
     updatePokemonPool();
-    updatePreloadQueue();
+    updatePreloadQueueAsync();
     displayNextPokemon();
   } else if (e.target.id === "enableAutocomplete") {
     saveSettings();
