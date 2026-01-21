@@ -102,7 +102,7 @@ async function loadPokemonList() {
     document.getElementById("bestStreak").textContent = bestStreak;
     updatePokemonPool();
 
-    // Preload first Pokémon fully to prevent flicker
+    // Preload first Pokémon fully
     const firstPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
     const firstIndex = getUnusedImageIndex(firstPokemon);
     await preloadSinglePokemon(firstPokemon, firstIndex);
@@ -142,17 +142,25 @@ function getUnusedImageIndex(pokemon) {
   return index;
 }
 
-/* ================= SILHOUETTE HELPER ================= */
-function createSilhouetteDataURL(img) {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  ctx.drawImage(img, 0, 0);
-  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 0) { data[i]=0; data[i+1]=0; data[i+2]=0; }
-  ctx.putImageData(new ImageData(data, canvas.width, canvas.height), 0, 0);
-  return canvas.toDataURL("image/png");
+/* ================= FAST SILHOUETTE ================= */
+function createSilhouetteFast(img) {
+  return new Promise(resolve => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+
+    ctx.drawImage(img, 0, 0);
+    ctx.globalCompositeOperation = "source-in";
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+      const silhouetteImg = new Image();
+      silhouetteImg.onload = () => resolve(silhouetteImg);
+      silhouetteImg.src = URL.createObjectURL(blob);
+    }, "image/png");
+  });
 }
 
 /* ================= PRELOAD SINGLE ================= */
@@ -163,10 +171,11 @@ function preloadSinglePokemon(pokemon, index) {
   return new Promise(resolve => {
     const fullImg = new Image();
     fullImg.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png`;
-    fullImg.onload = () => {
-      const silhouetteImg = new Image();
-      silhouetteImg.src = createSilhouetteDataURL(fullImg);
-      preloadedImages[pokemon][index] = { full: fullImg, silhouette: silhouetteImg };
+    fullImg.onload = async () => {
+      try {
+        const silhouetteImg = await createSilhouetteFast(fullImg);
+        preloadedImages[pokemon][index] = { full: fullImg, silhouette: silhouetteImg };
+      } catch (err) { console.error("Silhouette creation failed", err); }
       resolve();
     };
     fullImg.onerror = resolve;
@@ -194,7 +203,7 @@ function updatePreloadQueueSequential() {
   preloadPokemonSequentially();
 }
 
-/* ================= DISPLAY PRELOADED ================= */
+/* ================= DISPLAY ================= */
 function displayPreloadedPokemon(pokemon, index) {
   const preloaded = preloadedImages[pokemon]?.[index];
   if (!preloaded) return;
@@ -203,11 +212,11 @@ function displayPreloadedPokemon(pokemon, index) {
   clone.dataset.realSrc = preloaded.full.src;
   clone.classList.add("silhouette");
   clone.style.opacity = 0;
-  clone.style.transition = "opacity 0.05s ease-in";
+  clone.style.transition = "opacity 0.075s ease-in";
+
   pokemonImg.replaceWith(clone);
   pokemonImg = clone;
 
-  // Fade in
   requestAnimationFrame(() => { pokemonImg.style.opacity = 1; });
 
   badgeEl.style.opacity = 0;
@@ -271,12 +280,21 @@ function checkGuess() {
 /* ================= AUTOCOMPLETE ================= */
 function setupAwesomplete() {
   const enabled = document.getElementById("enableAutocomplete").checked;
-  if (!enabled) { if (awesompleteInstance) { awesompleteInstance.destroy(); awesompleteInstance=null; guessInput.removeAttribute("list"); } return; }
+  if (!enabled) { 
+    if (awesompleteInstance) { 
+      awesompleteInstance.destroy(); 
+      awesompleteInstance=null; 
+      guessInput.removeAttribute("list"); 
+    } 
+    return; 
+  }
   const list = pokemonList.slice().sort();
   if (!awesompleteInstance) {
     awesompleteInstance = new Awesomplete(guessInput, { list, minChars:1, maxItems:8, autoFirst:true, filter: Awesomplete.FILTER_STARTSWITH });
   } else { awesompleteInstance.list = list; }
-  const dropdown = awesompleteInstance.ul; dropdown.style.bottom = `${guessInput.offsetHeight+4}px`; dropdown.style.top = "auto";
+  const dropdown = awesompleteInstance.ul; 
+  dropdown.style.bottom = `${guessInput.offsetHeight+4}px`; 
+  dropdown.style.top = "auto";
 }
 
 /* ================= EVENTS ================= */
@@ -300,8 +318,16 @@ guessButton.addEventListener("click", checkGuess);
 document.addEventListener("keydown", e => { if(e.key==="Enter") guessed ? displayNextPokemon() : checkGuess(); });
 
 document.addEventListener("change", e => {
-  if(e.target.id==="includeForms" || /^gen\d+$/.test(e.target.id)) { saveSettings(); updatePokemonPool(); updatePreloadQueueSequential(); displayNextPokemon(); }
-  else if(e.target.id==="enableAutocomplete") { saveSettings(); setupAwesomplete(); }
+  if(e.target.id==="includeForms" || /^gen\d+$/.test(e.target.id)) { 
+    saveSettings(); 
+    updatePokemonPool(); 
+    updatePreloadQueueSequential(); 
+    displayNextPokemon(); 
+  }
+  else if(e.target.id==="enableAutocomplete") { 
+    saveSettings(); 
+    setupAwesomplete(); 
+  }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
