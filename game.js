@@ -20,7 +20,7 @@ let bestStreak = localStorage.getItem("bestStreak")
   : 0;
 
 /**
- * preloadedImages[pokemon][index] = Image
+ * preloadedImages[pokemon][index] = { full: Image, silhouette: Image }
  */
 const preloadedImages = {};
 const preloadQueue = [];
@@ -155,7 +155,7 @@ function getUnusedImageIndex(pokemon) {
   const used = usedImagesThisSession[pokemon];
 
   if (used.size >= IMAGES_PER_POKEMON) {
-    used.clear(); // allow reuse after exhausting all renders
+    used.clear();
   }
 
   let index;
@@ -165,32 +165,6 @@ function getUnusedImageIndex(pokemon) {
 
   used.add(index);
   return index;
-}
-
-/* ================= PRELOADING ================= */
-function preloadPokemon(pokemon, index) {
-  if (!preloadedImages[pokemon]) {
-    preloadedImages[pokemon] = {};
-  }
-
-  if (preloadedImages[pokemon][index]) return;
-
-  const img = new Image();
-  img.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png?ts=${Date.now()}`;
-  img.onload = () => {
-    preloadedImages[pokemon][index] = img;
-  };
-}
-
-function updatePreloadQueue() {
-  while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
-    const pokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
-    if (!preloadQueue.includes(pokemon)) {
-      preloadQueue.push(pokemon);
-      const index = getUnusedImageIndex(pokemon);
-      preloadPokemon(pokemon, index);
-    }
-  }
 }
 
 /* ================= SILHOUETTE HELPERS ================= */
@@ -207,7 +181,7 @@ function createSilhouetteDataURL(img) {
   const data = imageData.data;
 
   for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] > 0) { // preserve alpha
+    if (data[i + 3] > 0) {
       data[i] = 0;
       data[i + 1] = 0;
       data[i + 2] = 0;
@@ -216,6 +190,33 @@ function createSilhouetteDataURL(img) {
 
   ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL("image/png");
+}
+
+/* ================= PRELOADING ================= */
+function preloadPokemon(pokemon, index) {
+  if (!preloadedImages[pokemon]) preloadedImages[pokemon] = {};
+  if (preloadedImages[pokemon][index]) return;
+
+  const fullImg = new Image();
+  fullImg.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png?ts=${Date.now()}`;
+  fullImg.onload = () => {
+    const silhouetteDataUrl = createSilhouetteDataURL(fullImg);
+    const silhouetteImg = new Image();
+    silhouetteImg.src = silhouetteDataUrl;
+    preloadedImages[pokemon][index] = { full: fullImg, silhouette: silhouetteImg };
+  };
+}
+
+function updatePreloadQueue() {
+  while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
+    const pokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+    if (!preloadQueue.includes(pokemon)) {
+      preloadQueue.push(pokemon);
+      for (let i = 0; i < IMAGES_PER_POKEMON; i++) {
+        preloadPokemon(pokemon, i);
+      }
+    }
+  }
 }
 
 /* ================= GAME FLOW ================= */
@@ -233,33 +234,29 @@ function displayNextPokemon() {
   updatePreloadQueue();
 
   silhouetteIndex = getUnusedImageIndex(currentPokemon);
-
   pokemonImg.style.opacity = 0;
   pokemonImg.classList.remove("silhouette");
 
-  const img =
-    preloadedImages[currentPokemon]?.[silhouetteIndex] || new Image();
+  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
 
-  if (!img.src) {
-    img.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
-  }
-
-  const showSilhouette = () => {
-    // Store the real image src for later
-    pokemonImg.dataset.realSrc = img.src;
-
-    // Generate silhouette and set src AFTER it's ready
-    const silhouetteDataUrl = createSilhouetteDataURL(img);
-
-    // Only now update the <img> src
-    pokemonImg.src = silhouetteDataUrl;
+  if (preloaded?.silhouette?.complete) {
+    pokemonImg.dataset.realSrc = preloaded.full.src;
+    pokemonImg.src = preloaded.silhouette.src;
     pokemonImg.classList.add("silhouette");
     pokemonImg.style.opacity = 1;
-  };
-
-
-  if (img.complete) showSilhouette();
-  else img.onload = showSilhouette;
+  } else {
+    const fullImg = preloaded?.full || new Image();
+    fullImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
+    const showSilhouette = () => {
+      pokemonImg.dataset.realSrc = fullImg.src;
+      const silhouetteDataUrl = createSilhouetteDataURL(fullImg);
+      pokemonImg.src = silhouetteDataUrl;
+      pokemonImg.classList.add("silhouette");
+      pokemonImg.style.opacity = 1;
+    };
+    if (fullImg.complete) showSilhouette();
+    else fullImg.onload = showSilhouette;
+  }
 
   badgeEl.style.opacity = 0;
   pokemonImg.classList.remove("shake");
@@ -277,7 +274,6 @@ function checkGuess() {
   if (guessed) return;
 
   if (guessInput.value.trim().toLowerCase() === currentPokemon.toLowerCase()) {
-    // Reveal Pokémon
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
 
@@ -369,7 +365,6 @@ guessInput.addEventListener("input", () => {
 
 nextButton.addEventListener("click", () => {
   if (!guessed && nextButton.textContent === "Skip") {
-    // Reveal Pokémon
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
     pokemonNameEl.textContent = currentPokemon;
