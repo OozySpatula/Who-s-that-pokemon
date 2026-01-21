@@ -119,27 +119,27 @@ async function loadPokemonList() {
       );
     }
     await Promise.all(promises);
+
     document.getElementById("bestStreak").textContent = bestStreak;
     updatePokemonPool();
 
-    // Preload initial queue
-    while (preloadQueue.size() < PRELOAD_COUNT) {
-      const pkm = pokemonList[Math.floor(Math.random() * pokemonList.length)];
-      addToPreloadQueue(pkm);
-    }
+    /* ======== CHANGED: load ONE first ======== */
+    const firstPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+    const firstIndex = getNextIndexForPokemon(firstPokemon);
 
-    // Display first Pokémon after fully preloaded
-    const firstItem = preloadQueue.dequeue();
-    currentPokemon = firstItem.pokemon;
-    silhouetteIndex = firstItem.index;
+    currentPokemon = firstPokemon;
+    silhouetteIndex = firstIndex;
 
-    await preloadSinglePokemon(currentPokemon, silhouetteIndex);
-    displayPreloadedPokemon(currentPokemon, silhouetteIndex);
+    await preloadSinglePokemon(firstPokemon, firstIndex);
+    displayPreloadedPokemon(firstPokemon, firstIndex);
 
-    // Refill queue in background
-    refillQueueToCapacity();
+    /* ======== CHANGED: preload AFTER render ======== */
+    requestIdleCallback?.(() => refillQueueToCapacity()) 
+      || setTimeout(refillQueueToCapacity, 0);
 
-  } catch (err) { console.error("Failed to load Pokémon lists", err); }
+  } catch (err) {
+    console.error("Failed to load Pokémon lists", err);
+  }
 }
 
 /* ================= POOL ================= */
@@ -154,21 +154,18 @@ function updatePokemonPool() {
   }
   pokemonList = pool;
 
-  // Clear previous preloaded data
   Object.keys(preloadedImages).forEach(k => delete preloadedImages[k]);
   preloadQueue.items = [];
   setupAwesomplete();
 }
 
-/* ================= RANDOM ANGLE SELECTION ================= */
+/* ================= RANDOM ANGLE ================= */
 function getNextIndexForPokemon(pokemon) {
   if (!usedImagesThisSession[pokemon]) usedImagesThisSession[pokemon] = new Set();
   const used = usedImagesThisSession[pokemon];
 
-  // Reset if all angles used
   if (used.size >= IMAGES_PER_POKEMON) used.clear();
 
-  // Pick random unused index
   let index;
   do {
     index = Math.floor(Math.random() * IMAGES_PER_POKEMON);
@@ -178,7 +175,7 @@ function getNextIndexForPokemon(pokemon) {
   return index;
 }
 
-/* ================= FAST SILHOUETTE ================= */
+/* ================= SILHOUETTE ================= */
 function createSilhouetteFast(img) {
   return new Promise(resolve => {
     const canvas = document.createElement("canvas");
@@ -208,10 +205,8 @@ function preloadSinglePokemon(pokemon, index) {
     const fullImg = new Image();
     fullImg.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png`;
     fullImg.onload = async () => {
-      try {
-        const silhouetteImg = await createSilhouetteFast(fullImg);
-        preloadedImages[pokemon][index] = { full: fullImg, silhouette: silhouetteImg };
-      } catch (err) { console.error("Silhouette creation failed", err); }
+      const silhouetteImg = await createSilhouetteFast(fullImg);
+      preloadedImages[pokemon][index] = { full: fullImg, silhouette: silhouetteImg };
       resolve();
     };
     fullImg.onerror = resolve;
@@ -221,11 +216,8 @@ function preloadSinglePokemon(pokemon, index) {
 /* ================= PRELOAD QUEUE ================= */
 function addToPreloadQueue(pokemon) {
   const index = getNextIndexForPokemon(pokemon);
-
-  // Priority = number of unused angles left
   const unusedLeft = IMAGES_PER_POKEMON - usedImagesThisSession[pokemon].size + 1;
   preloadQueue.enqueue({ pokemon, index }, unusedLeft);
-
   preloadSinglePokemon(pokemon, index);
 }
 
@@ -267,14 +259,12 @@ function displayPreloadedPokemon(pokemon, index) {
 function displayNextPokemon() {
   if (preloadQueue.size() === 0) return;
 
-  // Take one from queue
   const nextItem = preloadQueue.dequeue();
   currentPokemon = nextItem.pokemon;
   silhouetteIndex = nextItem.index;
 
   displayPreloadedPokemon(currentPokemon, silhouetteIndex);
 
-  // Add one new Pokémon to keep queue full
   const newPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
   addToPreloadQueue(newPokemon);
 }
@@ -295,7 +285,10 @@ function checkGuess() {
     badgeEl.style.opacity = 1;
     badgeEl.classList.remove("badge"); void badgeEl.offsetWidth; badgeEl.classList.add("badge");
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-    guessInput.disabled = true; guessButton.disabled = true; nextButton.textContent = "Next"; guessed = true;
+    guessInput.disabled = true;
+    guessButton.disabled = true;
+    nextButton.textContent = "Next";
+    guessed = true;
   } else {
     streak = 0;
     document.getElementById("streak").textContent = streak;
@@ -306,21 +299,26 @@ function checkGuess() {
 /* ================= AUTOCOMPLETE ================= */
 function setupAwesomplete() {
   const enabled = document.getElementById("enableAutocomplete").checked;
-  if (!enabled) { 
-    if (awesompleteInstance) { 
-      awesompleteInstance.destroy(); 
-      awesompleteInstance=null; 
-      guessInput.removeAttribute("list"); 
-    } 
-    return; 
+  if (!enabled) {
+    if (awesompleteInstance) {
+      awesompleteInstance.destroy();
+      awesompleteInstance = null;
+      guessInput.removeAttribute("list");
+    }
+    return;
   }
   const list = pokemonList.slice().sort();
   if (!awesompleteInstance) {
-    awesompleteInstance = new Awesomplete(guessInput, { list, minChars:1, maxItems:8, autoFirst:true, filter: Awesomplete.FILTER_STARTSWITH });
-  } else { awesompleteInstance.list = list; }
-  const dropdown = awesompleteInstance.ul; 
-  dropdown.style.bottom = `${guessInput.offsetHeight+4}px`; 
-  dropdown.style.top = "auto";
+    awesompleteInstance = new Awesomplete(guessInput, {
+      list,
+      minChars: 1,
+      maxItems: 8,
+      autoFirst: true,
+      filter: Awesomplete.FILTER_STARTSWITH
+    });
+  } else {
+    awesompleteInstance.list = list;
+  }
 }
 
 /* ================= EVENTS ================= */
@@ -328,30 +326,42 @@ guessInput.addEventListener("keydown", e => {
   if (e.key !== "Tab" || !awesompleteInstance) return;
   const selected = awesompleteInstance.ul.querySelector("li[aria-selected='true']");
   if (!selected) return;
-  e.preventDefault(); awesompleteInstance.select(selected);
+  e.preventDefault();
+  awesompleteInstance.select(selected);
 });
-guessInput.addEventListener("input", () => { if (!guessInput.value && awesompleteInstance) awesompleteInstance.close(); });
+
+guessInput.addEventListener("input", () => {
+  if (!guessInput.value && awesompleteInstance) awesompleteInstance.close();
+});
+
 nextButton.addEventListener("click", () => {
-  if (!guessed && nextButton.textContent==="Skip") {
+  if (!guessed && nextButton.textContent === "Skip") {
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
     pokemonNameEl.textContent = currentPokemon;
     pokemonNameEl.style.opacity = 1;
-    guessInput.disabled = true; guessButton.disabled = true; nextButton.textContent="Next"; guessed=true;
-  } else displayNextPokemon();
+    guessInput.disabled = true;
+    guessButton.disabled = true;
+    nextButton.textContent = "Next";
+    guessed = true;
+  } else {
+    displayNextPokemon();
+  }
 });
+
 guessButton.addEventListener("click", checkGuess);
-document.addEventListener("keydown", e => { if(e.key==="Enter") guessed ? displayNextPokemon() : checkGuess(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter") guessed ? displayNextPokemon() : checkGuess();
+});
 
 document.addEventListener("change", e => {
-  if(e.target.id==="includeForms" || /^gen\d+$/.test(e.target.id)) { 
-    saveSettings(); 
-    updatePokemonPool(); 
-    displayNextPokemon(); 
-  }
-  else if(e.target.id==="enableAutocomplete") { 
-    saveSettings(); 
-    setupAwesomplete(); 
+  if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
+    saveSettings();
+    updatePokemonPool();
+    displayNextPokemon();
+  } else if (e.target.id === "enableAutocomplete") {
+    saveSettings();
+    setupAwesomplete();
   }
 });
 
@@ -361,6 +371,6 @@ document.addEventListener("DOMContentLoaded", () => {
   loadPokemonList();
   document.getElementById("settingsBtn").addEventListener("click", () => {
     const panel = document.getElementById("settingsPanel");
-    panel.style.display = panel.style.display==="block" ? "none" : "block";
+    panel.style.display = panel.style.display === "block" ? "none" : "block";
   });
 });
