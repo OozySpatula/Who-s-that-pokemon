@@ -238,28 +238,31 @@ function displayNextPokemon() {
 
   silhouetteIndex = getUnusedImageIndex(currentPokemon);
   pokemonImg.style.opacity = 0;
-  pokemonImg.classList.remove("silhouette");
 
-  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
-
-  // If silhouette exists, show it immediately; otherwise show full image and generate silhouette asynchronously
-  if (preloaded?.silhouette?.complete) {
-    pokemonImg.dataset.realSrc = preloaded.full.src;
-    pokemonImg.src = preloaded.silhouette.src;
-    pokemonImg.classList.add("silhouette");
+  // Immediately show the full image with CSS black silhouette
+  const immediateImg = new Image();
+  immediateImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
+  immediateImg.onload = () => {
+    pokemonImg.dataset.realSrc = immediateImg.src; // store real src
+    pokemonImg.src = immediateImg.src;
+    pokemonImg.classList.add("silhouette"); // CSS blacked out
     pokemonImg.style.opacity = 1;
-  } else {
-    const fullImg = preloaded?.full || new Image();
-    fullImg.src = `./public/Pokemon_Renders/${currentPokemon}/${currentPokemon}_${silhouetteIndex}.png?ts=${Date.now()}`;
-    const showSilhouette = () => {
-      pokemonImg.dataset.realSrc = fullImg.src;
-      const silhouetteDataUrl = createSilhouetteDataURL(fullImg);
-      pokemonImg.src = silhouetteDataUrl;
-      pokemonImg.classList.add("silhouette");
-      pokemonImg.style.opacity = 1;
-    };
-    if (fullImg.complete) showSilhouette();
-    else fullImg.onload = showSilhouette;
+  };
+
+  // Preload the real silhouette in the background
+  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
+  if (!preloaded) {
+    preloadPokemon(currentPokemon, silhouetteIndex);
+    const checkReady = setInterval(() => {
+      const p = preloadedImages[currentPokemon]?.[silhouetteIndex];
+      if (p?.silhouette?.complete) {
+        pokemonImg.src = p.silhouette.src; // swap to real silhouette
+        clearInterval(checkReady);
+      }
+    }, 100);
+  } else if (preloaded.silhouette?.complete) {
+    // swap immediately if already loaded
+    pokemonImg.src = preloaded.silhouette.src;
   }
 
   badgeEl.style.opacity = 0;
@@ -271,7 +274,7 @@ function displayNextPokemon() {
   pokemonNameEl.style.opacity = 0;
   guessed = false;
   guessInput.focus();
-}
+};
 
 /* ================= CHECK GUESS ================= */
 function checkGuess() {
