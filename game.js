@@ -22,11 +22,7 @@ let bestStreak = localStorage.getItem("bestStreak")
 /* Preloaded images */
 const preloadedImages = {};
 
-/* Sequential preload queue */
-const preloadQueue = [];
-let isPreloading = false;
-
-/* Used images tracking */
+/* Used indices tracker */
 const usedImagesThisSession = {};
 
 /* ================= SETTINGS ================= */
@@ -82,6 +78,30 @@ function renderGenCheckboxes() {
   }
 }
 
+/* ================= PRIORITY QUEUE ================= */
+class PriorityQueue {
+  constructor() { this.items = []; }
+  
+  enqueue(item, priority) {
+    this.items.push({ item, priority });
+    this.items.sort((a, b) => b.priority - a.priority);
+  }
+
+  dequeue() {
+    return this.items.shift()?.item;
+  }
+
+  size() {
+    return this.items.length;
+  }
+
+  peek() {
+    return this.items[0]?.item;
+  }
+}
+
+const preloadQueue = new PriorityQueue();
+
 /* ================= DATA LOADING ================= */
 async function loadPokemonList() {
   try {
@@ -102,15 +122,23 @@ async function loadPokemonList() {
     document.getElementById("bestStreak").textContent = bestStreak;
     updatePokemonPool();
 
-    // Preload first Pokémon fully
-    const firstPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
-    const firstIndex = getUnusedImageIndex(firstPokemon);
-    await preloadSinglePokemon(firstPokemon, firstIndex);
+    // Preload initial queue
+    while (preloadQueue.size() < PRELOAD_COUNT) {
+      const pkm = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+      addToPreloadQueue(pkm);
+    }
 
-    currentPokemon = firstPokemon;
-    silhouetteIndex = firstIndex;
-    displayPreloadedPokemon(firstPokemon, firstIndex);
-    updatePreloadQueueSequential(); // preload the rest
+    // Display first Pokémon after it's fully preloaded
+    const firstItem = preloadQueue.dequeue();
+    currentPokemon = firstItem.pokemon;
+    silhouetteIndex = firstItem.index;
+
+    await preloadSinglePokemon(currentPokemon, silhouetteIndex);
+    displayPreloadedPokemon(currentPokemon, silhouetteIndex);
+
+    // Refill queue in background
+    refillQueueToCapacity();
+
   } catch (err) { console.error("Failed to load Pokémon lists", err); }
 }
 
@@ -126,20 +154,22 @@ function updatePokemonPool() {
   }
   pokemonList = pool;
 
+  // Clear previous preloaded data
   Object.keys(preloadedImages).forEach(k => delete preloadedImages[k]);
-  preloadQueue.length = 0;
+  preloadQueue.items = [];
   setupAwesomplete();
 }
 
 /* ================= IMAGE INDEX LOGIC ================= */
-function getUnusedImageIndex(pokemon) {
+function getNextIndexForPokemon(pokemon) {
   if (!usedImagesThisSession[pokemon]) usedImagesThisSession[pokemon] = new Set();
   const used = usedImagesThisSession[pokemon];
-  if (used.size >= IMAGES_PER_POKEMON) used.clear();
-  let index;
-  do { index = Math.floor(Math.random() * IMAGES_PER_POKEMON); } while (used.has(index));
-  used.add(index);
-  return index;
+
+  for (let i = 0; i < IMAGES_PER_POKEMON; i++) {
+    if (!used.has(i)) { used.add(i); return i; }
+  }
+
+  return Math.floor(Math.random() * IMAGES_PER_POKEMON);
 }
 
 /* ================= FAST SILHOUETTE ================= */
@@ -182,25 +212,20 @@ function preloadSinglePokemon(pokemon, index) {
   });
 }
 
-/* ================= SEQUENTIAL PRELOADING ================= */
-async function preloadPokemonSequentially() {
-  if (isPreloading) return;
-  isPreloading = true;
+/* ================= PRELOAD QUEUE ================= */
+function addToPreloadQueue(pokemon) {
+  const index = getNextIndexForPokemon(pokemon);
+  const priority = IMAGES_PER_POKEMON - usedImagesThisSession[pokemon].size + 1;
+  preloadQueue.enqueue({ pokemon, index }, priority);
 
-  while (preloadQueue.length > 0) {
-    const { pokemon, index } = preloadQueue.shift();
-    await preloadSinglePokemon(pokemon, index);
-  }
-  isPreloading = false;
+  preloadSinglePokemon(pokemon, index);
 }
 
-function updatePreloadQueueSequential() {
-  while (preloadQueue.length < PRELOAD_COUNT && pokemonList.length) {
-    const pokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
-    const index = getUnusedImageIndex(pokemon);
-    preloadQueue.push({ pokemon, index });
+function refillQueueToCapacity() {
+  while (preloadQueue.size() < PRELOAD_COUNT) {
+    const pkm = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+    addToPreloadQueue(pkm);
   }
-  preloadPokemonSequentially();
 }
 
 /* ================= DISPLAY ================= */
@@ -232,25 +257,18 @@ function displayPreloadedPokemon(pokemon, index) {
 
 /* ================= DISPLAY NEXT ================= */
 function displayNextPokemon() {
-  if (!pokemonList.length) return;
+  if (preloadQueue.size() === 0) return;
 
-  let next;
-  do {
-    next = preloadQueue.shift()?.pokemon || pokemonList[Math.floor(Math.random() * pokemonList.length)];
-  } while (next === currentPokemon && pokemonList.length > 1);
+  // Take one from queue
+  const nextItem = preloadQueue.dequeue();
+  currentPokemon = nextItem.pokemon;
+  silhouetteIndex = nextItem.index;
 
-  currentPokemon = next;
-  silhouetteIndex = getUnusedImageIndex(currentPokemon);
-  updatePreloadQueueSequential();
+  displayPreloadedPokemon(currentPokemon, silhouetteIndex);
 
-  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
-  if (preloaded?.silhouette) {
-    displayPreloadedPokemon(currentPokemon, silhouetteIndex);
-  } else {
-    preloadSinglePokemon(currentPokemon, silhouetteIndex).then(() => {
-      displayPreloadedPokemon(currentPokemon, silhouetteIndex);
-    });
-  }
+  // Add one new Pokémon to keep queue full
+  const newPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+  addToPreloadQueue(newPokemon);
 }
 
 /* ================= CHECK GUESS ================= */
@@ -321,7 +339,6 @@ document.addEventListener("change", e => {
   if(e.target.id==="includeForms" || /^gen\d+$/.test(e.target.id)) { 
     saveSettings(); 
     updatePokemonPool(); 
-    updatePreloadQueueSequential(); 
     displayNextPokemon(); 
   }
   else if(e.target.id==="enableAutocomplete") { 
