@@ -128,7 +128,7 @@ async function loadPokemonList() {
       addToPreloadQueue(pkm);
     }
 
-    // Display first Pokémon after it's fully preloaded
+    // Display first Pokémon after fully preloaded
     const firstItem = preloadQueue.dequeue();
     currentPokemon = firstItem.pokemon;
     silhouetteIndex = firstItem.index;
@@ -160,16 +160,22 @@ function updatePokemonPool() {
   setupAwesomplete();
 }
 
-/* ================= IMAGE INDEX LOGIC ================= */
+/* ================= RANDOM ANGLE SELECTION ================= */
 function getNextIndexForPokemon(pokemon) {
   if (!usedImagesThisSession[pokemon]) usedImagesThisSession[pokemon] = new Set();
   const used = usedImagesThisSession[pokemon];
 
-  for (let i = 0; i < IMAGES_PER_POKEMON; i++) {
-    if (!used.has(i)) { used.add(i); return i; }
-  }
+  // Reset if all angles used
+  if (used.size >= IMAGES_PER_POKEMON) used.clear();
 
-  return Math.floor(Math.random() * IMAGES_PER_POKEMON);
+  // Pick random unused index
+  let index;
+  do {
+    index = Math.floor(Math.random() * IMAGES_PER_POKEMON);
+  } while (used.has(index));
+
+  used.add(index);
+  return index;
 }
 
 /* ================= FAST SILHOUETTE ================= */
@@ -215,8 +221,10 @@ function preloadSinglePokemon(pokemon, index) {
 /* ================= PRELOAD QUEUE ================= */
 function addToPreloadQueue(pokemon) {
   const index = getNextIndexForPokemon(pokemon);
-  const priority = IMAGES_PER_POKEMON - usedImagesThisSession[pokemon].size + 1;
-  preloadQueue.enqueue({ pokemon, index }, priority);
+
+  // Priority = number of unused angles left
+  const unusedLeft = IMAGES_PER_POKEMON - usedImagesThisSession[pokemon].size + 1;
+  preloadQueue.enqueue({ pokemon, index }, unusedLeft);
 
   preloadSinglePokemon(pokemon, index);
 }
