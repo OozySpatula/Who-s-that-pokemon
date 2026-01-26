@@ -203,6 +203,7 @@ function preloadSinglePokemon(pokemon, index) {
 
   return new Promise(resolve => {
     const fullImg = new Image();
+    fullImg.crossOrigin = "anonymous";
     fullImg.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png`;
     fullImg.onload = async () => {
       const silhouetteImg = await createSilhouetteFast(fullImg);
