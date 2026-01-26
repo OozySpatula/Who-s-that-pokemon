@@ -189,13 +189,17 @@ function createSilhouetteFast(img) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(blob => {
+      if (!blob) {
+        // fallback: use original image if silhouette fails
+        resolve(img);
+        return;
+      }
       const silhouetteImg = new Image();
       silhouetteImg.onload = () => resolve(silhouetteImg);
       silhouetteImg.src = URL.createObjectURL(blob);
     }, "image/png");
   });
 }
-
 /* ================= PRELOAD SINGLE ================= */
 function preloadSinglePokemon(pokemon, index) {
   if (!preloadedImages[pokemon]) preloadedImages[pokemon] = {};
