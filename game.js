@@ -297,6 +297,8 @@ nextButton.addEventListener("click", () => {
     guessButton.disabled = true;
     nextButton.textContent = "Next";
     guessed = true;
+    streak = 0;
+    document.getElementById("streak").textContent = streak;
   } else displayNextPokemon();
 });
 
