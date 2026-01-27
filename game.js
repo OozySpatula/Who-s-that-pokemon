@@ -15,6 +15,7 @@ let silhouetteIndex = 0;
 let streak = 0;
 let guessed = false;
 let awesompleteInstance = null;
+let isSilhouetteVisible = true;
 
 let bestStreak = localStorage.getItem("bestStreak")
   ? parseInt(localStorage.getItem("bestStreak"))
@@ -220,6 +221,11 @@ function displayPreloadedPokemon(pokemon, index) {
   pokemonNameEl.style.opacity = 0;
   guessed = false;
   guessInput.focus();
+  isSilhouetteVisible = true;
+
+  // reset eye icons
+  document.getElementById("eyeOpen").style.display = "block";
+  document.getElementById("eyeClosed").style.display = "none";
   requestAnimationFrame(() => { pokemonImg.style.opacity = 1; });
 }
 
@@ -254,6 +260,7 @@ function checkGuess() {
     guessButton.disabled = true;
     nextButton.textContent = "Next";
     guessed = true;
+    isSilhouetteVisible = false;
   } else {
     streak = 0;
     document.getElementById("streak").textContent = streak;
@@ -369,11 +376,9 @@ document.addEventListener("DOMContentLoaded", () => {
 const copyBtn = document.getElementById("copyBtn");
 
 copyBtn.addEventListener("click", async () => {
-  if (!pokemonImg || !pokemonImg.src) return;
-  if (!pokemonImg.complete || !pokemonImg.naturalWidth) return;
+  if (!pokemonImg || !pokemonImg.complete) return;
 
   const img = pokemonImg;
-
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
@@ -383,24 +388,16 @@ copyBtn.addEventListener("click", async () => {
   canvas.width = w;
   canvas.height = h;
 
-  /* ===============================
-     1. Flatten transparency
-     =============================== */
-  const bgColor = getComputedStyle(document.body).backgroundColor || "#ffffff";
-  ctx.fillStyle = bgColor;
+  /* Flatten transparency */
+  const bg = getComputedStyle(document.body).backgroundColor || "#ffffff";
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
-  /* ===============================
-     2. Draw Pokémon image
-     =============================== */
+  /* Draw visible image */
   ctx.drawImage(img, 0, 0, w, h);
 
-  /* ===============================
-     3. Draw Pokémon name (revealed only)
-     =============================== */
-  if (guessed) {
-    const text = currentPokemon;
-
+  /* Draw name if revealed AND not silhouette */
+  if (guessed && !isSilhouetteVisible) {
     const fontSize = Math.floor(h * 0.075);
     ctx.font = `bold ${fontSize}px Arial`;
     ctx.textAlign = "center";
@@ -412,16 +409,13 @@ copyBtn.addEventListener("click", async () => {
     // Outline
     ctx.strokeStyle = "#333";
     ctx.lineWidth = Math.max(2, fontSize * 0.12);
-    ctx.strokeText(text, x, y);
+    ctx.strokeText(currentPokemon, x, y);
 
     // Fill
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(text, x, y);
+    ctx.fillStyle = "#fff";
+    ctx.fillText(currentPokemon, x, y);
   }
 
-  /* ===============================
-     4. Copy to clipboard
-     =============================== */
   canvas.toBlob(async blob => {
     if (!blob) return;
 
@@ -430,13 +424,40 @@ copyBtn.addEventListener("click", async () => {
         new ClipboardItem({ "image/png": blob })
       ]);
 
-      // Optional feedback
+      // Optional visual feedback
       copyBtn.classList.add("copied");
-      setTimeout(() => copyBtn.classList.remove("copied"), 600);
-
+      setTimeout(() => copyBtn.classList.remove("copied"), 500);
     } catch (err) {
-      console.error("Clipboard copy failed", err);
-      alert("Clipboard copy not supported in this browser.");
+      alert("Clipboard not supported in this browser.");
     }
   }, "image/png");
+});
+
+const toggleSilhouetteBtn = document.getElementById("toggleSilhouetteBtn");
+const eyeOpen = document.getElementById("eyeOpen");
+const eyeClosed = document.getElementById("eyeClosed");
+
+toggleSilhouetteBtn.addEventListener("click", () => {
+  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
+  if (!preloaded) return;
+
+  if (isSilhouetteVisible) {
+    // Show full image
+    pokemonImg.src = preloaded.full.src;
+    pokemonImg.classList.remove("silhouette");
+
+    // ✅ Correct icon: eye open = full image
+    eyeOpen.style.display = "block";
+    eyeClosed.style.display = "none";
+  } else {
+    // Show silhouette
+    pokemonImg.src = preloaded.silhouette.src;
+    pokemonImg.classList.add("silhouette");
+
+    // ✅ Correct icon: eye closed = silhouette
+    eyeOpen.style.display = "none";
+    eyeClosed.style.display = "block";
+  }
+
+  isSilhouetteVisible = !isSilhouetteVisible;
 });
