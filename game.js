@@ -15,6 +15,7 @@ let silhouetteIndex = 0;
 let streak = 0;
 let guessed = false;
 let awesompleteInstance = null;
+let isSilhouetteVisible = true;
 
 let bestStreak = localStorage.getItem("bestStreak")
   ? parseInt(localStorage.getItem("bestStreak"))
@@ -212,6 +213,7 @@ function displayPreloadedPokemon(pokemon, index) {
   pokemonImg = clone;
   badgeEl.style.opacity = 0;
   pokemonImg.classList.remove("shake");
+  toggleSilhouetteBtn.style.display = "none";
   guessInput.value = "";
   guessInput.disabled = false;
   guessButton.disabled = false;
@@ -219,6 +221,11 @@ function displayPreloadedPokemon(pokemon, index) {
   pokemonNameEl.style.opacity = 0;
   guessed = false;
   guessInput.focus();
+  isSilhouetteVisible = true;
+
+  // reset eye icons
+  document.getElementById("eyeOpen").style.display = "block";
+  document.getElementById("eyeClosed").style.display = "none";
   requestAnimationFrame(() => { pokemonImg.style.opacity = 1; });
 }
 
@@ -238,6 +245,7 @@ function checkGuess() {
   if (guessInput.value.trim().toLowerCase() === currentPokemon.toLowerCase()) {
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
+    toggleSilhouetteBtn.style.display = "inline-flex";
     streak++;
     document.getElementById("streak").textContent = streak;
     if (streak > bestStreak) {
@@ -252,6 +260,7 @@ function checkGuess() {
     guessButton.disabled = true;
     nextButton.textContent = "Next";
     guessed = true;
+    isSilhouetteVisible = false;
   } else {
     streak = 0;
     document.getElementById("streak").textContent = streak;
@@ -291,6 +300,7 @@ nextButton.addEventListener("click", () => {
   if (!guessed && nextButton.textContent === "Skip") {
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
+    toggleSilhouetteBtn.style.display = "inline-flex";
     pokemonNameEl.textContent = currentPokemon;
     pokemonNameEl.style.opacity = 1;
     guessInput.disabled = true;
@@ -361,4 +371,93 @@ document.addEventListener("DOMContentLoaded", () => {
     const panel = document.getElementById("settingsPanel");
     panel.style.display = panel.style.display === "block" ? "none" : "block";
   });
+});
+
+const copyBtn = document.getElementById("copyBtn");
+
+copyBtn.addEventListener("click", async () => {
+  if (!pokemonImg || !pokemonImg.complete) return;
+
+  const img = pokemonImg;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+
+  canvas.width = w;
+  canvas.height = h;
+
+  /* Flatten transparency */
+  const bg = getComputedStyle(document.body).backgroundColor || "#ffffff";
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  /* Draw visible image */
+  ctx.drawImage(img, 0, 0, w, h);
+
+  /* Draw name if revealed AND not silhouette */
+  if (guessed && !isSilhouetteVisible) {
+    const fontSize = Math.floor(h * 0.075);
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+
+    const x = w / 2;
+    const y = h - h * 0.05;
+
+    // Outline
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = Math.max(2, fontSize * 0.12);
+    ctx.strokeText(currentPokemon, x, y);
+
+    // Fill
+    ctx.fillStyle = "#fff";
+    ctx.fillText(currentPokemon, x, y);
+  }
+
+  canvas.toBlob(async blob => {
+    if (!blob) return;
+
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob })
+      ]);
+
+      // Optional visual feedback
+      copyBtn.classList.add("copied");
+      setTimeout(() => copyBtn.classList.remove("copied"), 500);
+    } catch (err) {
+      alert("Clipboard not supported in this browser.");
+    }
+  }, "image/png");
+});
+
+const toggleSilhouetteBtn = document.getElementById("toggleSilhouetteBtn");
+const eyeOpen = document.getElementById("eyeOpen");
+const eyeClosed = document.getElementById("eyeClosed");
+
+toggleSilhouetteBtn.addEventListener("click", () => {
+  const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
+  if (!preloaded) return;
+
+  if (isSilhouetteVisible) {
+    // Show full image
+    pokemonImg.src = preloaded.full.src;
+    pokemonImg.classList.remove("silhouette");
+
+    // ✅ Correct icon: eye open = full image
+    eyeOpen.style.display = "block";
+    eyeClosed.style.display = "none";
+  } else {
+    // Show silhouette
+    pokemonImg.src = preloaded.silhouette.src;
+    pokemonImg.classList.add("silhouette");
+
+    // ✅ Correct icon: eye closed = silhouette
+    eyeOpen.style.display = "none";
+    eyeClosed.style.display = "block";
+  }
+
+  isSilhouetteVisible = !isSilhouetteVisible;
 });
