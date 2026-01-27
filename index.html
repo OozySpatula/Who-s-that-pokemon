@@ -18,6 +18,8 @@
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.7/awesomplete.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.7/awesomplete.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </head>
 <body>
   <h1>Who's That Pokémon?</h1>
@@ -67,6 +69,49 @@
     <img id="pokemonImg" alt="Pokémon silhouette" />
     <div id="badge" class="badge">Correct!</div>
     <div id="pokemonName"></div>
+
+    <!-- Overlay icon buttons -->
+    <div class="image-buttons">
+      <!-- Toggle silhouette -->
+      <button id="toggleSilhouetteBtn" class="icon-btn" title="Toggle silhouette">
+
+        <!-- Eye open -->
+        <svg id="eyeOpen"
+             xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24"
+             width="20" height="20"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="1.5"
+             stroke-linecap="round"
+             stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+
+        <!-- Eye slash -->
+        <svg id="eyeClosed"
+             xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24"
+             width="20" height="20"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="1.5"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+             style="display:none;">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+          <line x1="2" y1="2" x2="22" y2="22"/>
+        </svg>
+
+      </button>
+
+      <!-- Copy -->
+      <button id="copyBtn" class="icon-btn" title="Copy Pokémon name">
+        <i class="bi bi-files"></i>
+      </button>
+    </div>
   </div>
 
   <div class="input-container" style="position: relative; display: flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">

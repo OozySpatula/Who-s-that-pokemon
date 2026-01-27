@@ -280,3 +280,45 @@ button:hover {
   background: #fff;
   margin-bottom: 4px; /* gap above input */
 }
+
+/* =========================
+   Pokémon Image Overlay Buttons
+   ========================= */
+
+/* Overlay buttons */
+.image-buttons {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+/* Icon button */
+.icon-btn {
+  background: #ffcb05;
+  border: none;
+  border-radius: 50%;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.icon-btn:hover {
+  transform: scale(1.15);
+}
+
+/* Bootstrap icon sizing */
+.icon-btn i {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* SVG icon sizing */
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
