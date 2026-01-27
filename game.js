@@ -438,27 +438,27 @@ const toggleSilhouetteBtn = document.getElementById("toggleSilhouetteBtn");
 const eyeOpen = document.getElementById("eyeOpen");
 const eyeClosed = document.getElementById("eyeClosed");
 
-toggleSilhouetteBtn.addEventListener("click", () => {
+toggleSilhouetteBtn.addEventListener("click", async () => {
   const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
   if (!preloaded) return;
 
-  if (isSilhouetteVisible) {
-    // Show full image
-    pokemonImg.src = preloaded.full.src;
-    pokemonImg.classList.remove("silhouette");
+  // Determine the target image
+  const targetImg = isSilhouetteVisible ? preloaded.full : preloaded.silhouette;
 
-    // ✅ Correct icon: eye open = full image
-    eyeOpen.style.display = "block";
-    eyeClosed.style.display = "none";
-  } else {
-    // Show silhouette
-    pokemonImg.src = preloaded.silhouette.src;
-    pokemonImg.classList.add("silhouette");
+  try {
+    // Wait for image to decode (safe even if already decoded)
+    await targetImg.decode();
 
-    // ✅ Correct icon: eye closed = silhouette
-    eyeOpen.style.display = "none";
-    eyeClosed.style.display = "block";
+    // Update the <img> src
+    pokemonImg.src = targetImg.src;
+    pokemonImg.classList.toggle("silhouette", !isSilhouetteVisible);
+
+    // Update eye icons
+    eyeOpen.style.display = isSilhouetteVisible ? "block" : "none";
+    eyeClosed.style.display = isSilhouetteVisible ? "none" : "block";
+
+    isSilhouetteVisible = !isSilhouetteVisible;
+  } catch (err) {
+    console.error("Failed to toggle silhouette image:", err);
   }
-
-  isSilhouetteVisible = !isSilhouetteVisible;
 });
