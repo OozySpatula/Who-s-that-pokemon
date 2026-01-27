@@ -11,7 +11,6 @@ const pokemonByGen = {};
 const formsByGen = {};
 let pokemonList = [];
 let currentPokemon = "";
-let silhouetteIndex = 0;
 let streak = 0;
 let guessed = false;
 let awesompleteInstance = null;
