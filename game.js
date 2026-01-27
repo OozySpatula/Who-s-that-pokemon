@@ -310,9 +310,25 @@ document.addEventListener("change", e => {
   } else if (e.target.id === "enableAutocomplete") { saveSettings(); setupAwesomplete(); }
 });
 
+function disableLastGenCheckbox() {
+  const genCheckboxes = document.querySelectorAll("#genChecklist input[type=checkbox]");
+
+  function updateDisabledState() {
+    const checked = Array.from(genCheckboxes).filter(c => c.checked);
+    genCheckboxes.forEach(cb => cb.disabled = false); // enable all first
+    if (checked.length === 1) {
+      checked[0].disabled = true; // disable the last remaining
+    }
+  }
+
+  genCheckboxes.forEach(cb => cb.addEventListener("change", updateDisabledState));
+  updateDisabledState(); // initial check
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   renderGenCheckboxes();
   loadSettings();
+  disableLastGenCheckbox();
   loadPokemonList();
   document.getElementById("settingsBtn").addEventListener("click", () => {
     const panel = document.getElementById("settingsPanel");
