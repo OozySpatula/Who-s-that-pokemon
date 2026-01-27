@@ -309,6 +309,7 @@ nextButton.addEventListener("click", () => {
     guessed = true;
     streak = 0;
     document.getElementById("streak").textContent = streak;
+    isSilhouetteVisible = false;
   } else displayNextPokemon();
 });
 
