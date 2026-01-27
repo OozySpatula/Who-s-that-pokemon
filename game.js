@@ -306,6 +306,7 @@ document.addEventListener("keydown", e => { if (e.key === "Enter") guessed ? dis
 document.addEventListener("change", e => {
   if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
     saveSettings(); updatePokemonPool(); displayNextPokemon();
+    location.reload();
   } else if (e.target.id === "enableAutocomplete") { saveSettings(); setupAwesomplete(); }
 });
 
