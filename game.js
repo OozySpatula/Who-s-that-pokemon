@@ -365,3 +365,78 @@ document.addEventListener("DOMContentLoaded", () => {
     panel.style.display = panel.style.display === "block" ? "none" : "block";
   });
 });
+
+const copyBtn = document.getElementById("copyBtn");
+
+copyBtn.addEventListener("click", async () => {
+  if (!pokemonImg || !pokemonImg.src) return;
+  if (!pokemonImg.complete || !pokemonImg.naturalWidth) return;
+
+  const img = pokemonImg;
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+
+  canvas.width = w;
+  canvas.height = h;
+
+  /* ===============================
+     1. Flatten transparency
+     =============================== */
+  const bgColor = getComputedStyle(document.body).backgroundColor || "#ffffff";
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, w, h);
+
+  /* ===============================
+     2. Draw Pokémon image
+     =============================== */
+  ctx.drawImage(img, 0, 0, w, h);
+
+  /* ===============================
+     3. Draw Pokémon name (revealed only)
+     =============================== */
+  if (guessed) {
+    const text = currentPokemon;
+
+    const fontSize = Math.floor(h * 0.075);
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+
+    const x = w / 2;
+    const y = h - h * 0.05;
+
+    // Outline
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = Math.max(2, fontSize * 0.12);
+    ctx.strokeText(text, x, y);
+
+    // Fill
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(text, x, y);
+  }
+
+  /* ===============================
+     4. Copy to clipboard
+     =============================== */
+  canvas.toBlob(async blob => {
+    if (!blob) return;
+
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob })
+      ]);
+
+      // Optional feedback
+      copyBtn.classList.add("copied");
+      setTimeout(() => copyBtn.classList.remove("copied"), 600);
+
+    } catch (err) {
+      console.error("Clipboard copy failed", err);
+      alert("Clipboard copy not supported in this browser.");
+    }
+  }, "image/png");
+});
