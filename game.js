@@ -212,6 +212,7 @@ function displayPreloadedPokemon(pokemon, index) {
   pokemonImg = clone;
   badgeEl.style.opacity = 0;
   pokemonImg.classList.remove("shake");
+  toggleSilhouetteBtn.style.display = "none";
   guessInput.value = "";
   guessInput.disabled = false;
   guessButton.disabled = false;
@@ -238,6 +239,7 @@ function checkGuess() {
   if (guessInput.value.trim().toLowerCase() === currentPokemon.toLowerCase()) {
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
+    toggleSilhouetteBtn.style.display = "inline-flex";
     streak++;
     document.getElementById("streak").textContent = streak;
     if (streak > bestStreak) {
@@ -291,6 +293,7 @@ nextButton.addEventListener("click", () => {
   if (!guessed && nextButton.textContent === "Skip") {
     pokemonImg.src = pokemonImg.dataset.realSrc;
     pokemonImg.classList.remove("silhouette");
+    toggleSilhouetteBtn.style.display = "inline-flex";
     pokemonNameEl.textContent = currentPokemon;
     pokemonNameEl.style.opacity = 1;
     guessInput.disabled = true;

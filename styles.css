@@ -322,3 +322,7 @@ button:hover {
   width: 20px;
   height: 20px;
 }
+
+#toggleSilhouetteBtn {
+  display: none;
+}
