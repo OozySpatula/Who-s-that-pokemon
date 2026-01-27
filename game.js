@@ -303,11 +303,36 @@ nextButton.addEventListener("click", () => {
 guessButton.addEventListener("click", checkGuess);
 document.addEventListener("keydown", e => { if (e.key === "Enter") guessed ? displayNextPokemon() : checkGuess(); });
 
-document.addEventListener("change", e => {
+document.addEventListener("change", async e => {
   if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
-    saveSettings(); updatePokemonPool(); displayNextPokemon();
-    location.reload();
-  } else if (e.target.id === "enableAutocomplete") { saveSettings(); setupAwesomplete(); }
+    saveSettings();
+
+    // Reset streak
+    streak = 0;
+    document.getElementById("streak").textContent = streak;
+
+    updatePokemonPool();
+
+    // pick a fresh Pokémon from the updated pool
+    if (pokemonList.length === 0) return; // safety
+    const firstPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+    const firstIndex = getNextIndexForPokemon(firstPokemon);
+    currentPokemon = firstPokemon;
+    silhouetteIndex = firstIndex;
+
+    await preloadSinglePokemon(firstPokemon, firstIndex);
+    displayPreloadedPokemon(firstPokemon, firstIndex);
+
+    // refill the preload queue
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(refillQueueToCapacity);
+    } else {
+      setTimeout(refillQueueToCapacity, 50);
+    }
+  } else if (e.target.id === "enableAutocomplete") {
+    saveSettings();
+    setupAwesomplete();
+  }
 });
 
 function disableLastGenCheckbox() {
