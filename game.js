@@ -398,7 +398,7 @@ copyBtn.addEventListener("click", async () => {
   ctx.drawImage(img, 0, 0, w, h);
 
   /* Draw name if revealed AND not silhouette */
-  if (guessed && !isSilhouetteVisible) {
+  if (!isSilhouetteVisible) {
     const fontSize = Math.floor(h * 0.075);
     ctx.font = `bold ${fontSize}px Arial`;
     ctx.textAlign = "center";
