@@ -15,7 +15,6 @@ let silhouetteIndex = 0;
 let streak = 0;
 let guessed = false;
 let awesompleteInstance = null;
-let isSilhouetteVisible = true;
 
 let bestStreak = localStorage.getItem("bestStreak")
   ? parseInt(localStorage.getItem("bestStreak"))
@@ -221,7 +220,6 @@ function displayPreloadedPokemon(pokemon, index) {
   pokemonNameEl.style.opacity = 0;
   guessed = false;
   guessInput.focus();
-  isSilhouetteVisible = true;
 
   // reset eye icons
   document.getElementById("eyeOpen").style.display = "block";
@@ -260,7 +258,6 @@ function checkGuess() {
     guessButton.disabled = true;
     nextButton.textContent = "Next";
     guessed = true;
-    isSilhouetteVisible = false;
   } else {
     streak = 0;
     document.getElementById("streak").textContent = streak;
@@ -397,7 +394,7 @@ copyBtn.addEventListener("click", async () => {
   ctx.drawImage(img, 0, 0, w, h);
 
   /* Draw name if revealed AND not silhouette */
-  if (guessed && !isSilhouetteVisible) {
+  if (!pokemonImg.classList.contains("silhouette")) {
     const fontSize = Math.floor(h * 0.075);
     ctx.font = `bold ${fontSize}px Arial`;
     ctx.textAlign = "center";
@@ -437,27 +434,24 @@ const toggleSilhouetteBtn = document.getElementById("toggleSilhouetteBtn");
 const eyeOpen = document.getElementById("eyeOpen");
 const eyeClosed = document.getElementById("eyeClosed");
 
-toggleSilhouetteBtn.addEventListener("click", () => {
+toggleSilhouetteBtn.addEventListener("click", async () => {
   const preloaded = preloadedImages[currentPokemon]?.[silhouetteIndex];
   if (!preloaded) return;
 
-  if (isSilhouetteVisible) {
-    // Show full image
-    pokemonImg.src = preloaded.full.src;
-    pokemonImg.classList.remove("silhouette");
+  const isSilhouette = pokemonImg.classList.contains("silhouette");
+  const targetImg = isSilhouette ? preloaded.full : preloaded.silhouette;
 
-    // ✅ Correct icon: eye open = full image
-    eyeOpen.style.display = "block";
-    eyeClosed.style.display = "none";
-  } else {
-    // Show silhouette
-    pokemonImg.src = preloaded.silhouette.src;
-    pokemonImg.classList.add("silhouette");
+  try {
+    await targetImg.decode();
 
-    // ✅ Correct icon: eye closed = silhouette
-    eyeOpen.style.display = "none";
-    eyeClosed.style.display = "block";
+    // swap image
+    pokemonImg.src = targetImg.src;
+    pokemonImg.classList.toggle("silhouette", !isSilhouette);
+
+    // icons reflect CURRENT visible state
+    eyeOpen.style.display = isSilhouette ? "block" : "none";
+    eyeClosed.style.display = isSilhouette ? "none" : "block";
+  } catch (err) {
+    console.error("Failed to toggle silhouette image:", err);
   }
-
-  isSilhouetteVisible = !isSilhouetteVisible;
 });
