@@ -3,6 +3,7 @@ import confetti from 'https://cdn.skypack.dev/canvas-confetti';
 /* ================= CONFIG ================= */
 const MAX_GEN = 3;
 const IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 const PRELOAD_COUNT = IS_MOBILE ? 4 : 10;
 const IMAGES_PER_POKEMON = 4;
 
@@ -403,12 +404,10 @@ copyBtn.addEventListener("click", async () => {
     const x = w / 2;
     const y = h - h * 0.05;
 
-    // Outline
     ctx.strokeStyle = "#333";
     ctx.lineWidth = Math.max(2, fontSize * 0.12);
     ctx.strokeText(currentPokemon, x, y);
 
-    // Fill
     ctx.fillStyle = "#fff";
     ctx.fillText(currentPokemon, x, y);
   }
@@ -416,16 +415,31 @@ copyBtn.addEventListener("click", async () => {
   canvas.toBlob(async blob => {
     if (!blob) return;
 
+    /* 📱 iOS Safari fallback */
+    if (IS_IOS || !navigator.clipboard?.write) {
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, "_blank");
+
+      // iOS sometimes blocks immediate opens
+      if (!win) {
+        alert("Tap and hold the image to copy or save.");
+      }
+      return;
+    }
+
+    /* 🖥 Desktop browsers */
     try {
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob })
       ]);
 
-      // Optional visual feedback
       copyBtn.classList.add("copied");
       setTimeout(() => copyBtn.classList.remove("copied"), 500);
     } catch (err) {
-      alert("Clipboard not supported in this browser.");
+      console.error("Clipboard failed, falling back:", err);
+
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
     }
   }, "image/png");
 });
