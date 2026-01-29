@@ -291,6 +291,7 @@ button:hover {
   bottom: 6px;
   right: 6px;
   display: flex;
+  flex-direction: column; /* 👈 stack vertically */
   gap: 6px;
 }
 
