@@ -1,7 +1,7 @@
 import confetti from 'https://cdn.skypack.dev/canvas-confetti';
 
 /* ================= CONFIG ================= */
-const MAX_GEN = 3;
+const MAX_GEN = 4;
 const IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 const PRELOAD_COUNT = IS_MOBILE ? 4 : 10;
@@ -170,6 +170,14 @@ function createSilhouetteFast(img) {
   });
 }
 
+function getRenderFolderName(pokemon) {
+  // Special-case Mime Jr. because folders can't contain dots
+  if (pokemon === "Mime Jr.") {
+    return "Mime Jr";
+  }
+  return pokemon;
+}
+
 /* ================= PRELOAD ================= */
 function preloadSinglePokemon(pokemon, index) {
   if (!preloadedImages[pokemon]) preloadedImages[pokemon] = {};
@@ -177,7 +185,8 @@ function preloadSinglePokemon(pokemon, index) {
   return new Promise(resolve => {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.src = `./public/Pokemon_Renders/${pokemon}/${pokemon}_${index}.png`;
+    const folderName = getRenderFolderName(pokemon);
+    img.src = `./public/Pokemon_Renders/${folderName}/${folderName}_${index}.png`;
     img.onload = async () => {
       const sil = await createSilhouetteFast(img);
       preloadedImages[pokemon][index] = { full: img, silhouette: sil };
