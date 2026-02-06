@@ -286,7 +286,7 @@ function setupAwesomplete() {
   if (!awesompleteInstance) {
     awesompleteInstance = new Awesomplete(guessInput, {
       list, minChars: 1, maxItems: 8, autoFirst: true,
-      filter: Awesomplete.FILTER_STARTSWITH
+      filter: Awesomplete.FILTER_CONTAINS
     });
   } else awesompleteInstance.list = list;
 }

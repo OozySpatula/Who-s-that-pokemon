@@ -1,11 +1,11 @@
-Castform Sunny Form
-Castform Rainy Form
-Castform Snowy Form
+Sunny Form Castform
+Rainy Form Castform 
+Snowy Form Castform
 Primal Kyogre
 Primal Groudon
-Deoxys Attack Forme
-Deoxys Defense Forme
-Deoxys Speed Forme
+Attack Forme Deoxys
+Defense Forme Deoxys
+Speed Forme Deoxys
 Mega Blaziken
 Mega Gardevoir
 Mega Mawile
