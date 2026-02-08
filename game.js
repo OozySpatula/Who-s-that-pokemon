@@ -93,9 +93,9 @@ async function loadPokemonList() {
   try {
     const promises = [];
     for (let gen = 1; gen <= MAX_GEN; gen++) {
-      promises.push(fetch(`./public/gen${gen}_pokemon.txt`).then(r => r.text())
+      promises.push(fetch(`./public/gen${gen}_pokemon.txt?v=${Date.now()}`).then(r => r.text())
         .then(t => pokemonByGen[gen] = t.split(/\r?\n/).filter(Boolean)));
-      promises.push(fetch(`./public/gen${gen}_forms.txt`).then(r => r.text())
+      promises.push(fetch(`./public/gen${gen}_forms.txt?v=${Date.now()}`).then(r => r.text())
         .then(t => formsByGen[gen] = t.split(/\r?\n/).filter(Boolean)));
     }
     await Promise.all(promises);
