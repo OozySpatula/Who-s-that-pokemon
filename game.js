@@ -1,4 +1,4 @@
-import confetti from 'https://cdn.skypack.dev/canvas-confetti';
+import confetti from "https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.module.mjs";
 
 /* ================= CONFIG ================= */
 const MAX_GEN = 4;
