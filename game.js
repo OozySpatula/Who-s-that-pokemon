@@ -424,15 +424,17 @@ copyBtn.addEventListener("click", async () => {
   canvas.toBlob(async blob => {
     if (!blob) return;
 
-    /* 📱 iOS Safari fallback */
-    if (IS_IOS || !navigator.clipboard?.write) {
+    /* 📱 iOS Safari → always open in new tab */
+    if (IS_IOS) {
       const url = URL.createObjectURL(blob);
-      const win = window.open(url, "_blank");
+      window.open(url, "_blank");
+      return;
+    }
 
-      // iOS sometimes blocks immediate opens
-      if (!win) {
-        alert("Tap and hold the image to copy or save.");
-      }
+    /* Fallback for browsers without clipboard API */
+    if (!navigator.clipboard?.write) {
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
       return;
     }
 
