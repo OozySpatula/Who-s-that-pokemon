@@ -382,7 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const copyBtn = document.getElementById("copyBtn");
 
-copyBtn.addEventListener("click", async () => {
+copyBtn.addEventListener("click", () => {
   if (!pokemonImg || !pokemonImg.complete) return;
 
   const img = pokemonImg;
@@ -395,15 +395,12 @@ copyBtn.addEventListener("click", async () => {
   canvas.width = w;
   canvas.height = h;
 
-  /* Flatten transparency */
   const bg = getComputedStyle(document.body).backgroundColor || "#ffffff";
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
-  /* Draw visible image */
   ctx.drawImage(img, 0, 0, w, h);
 
-  /* Draw name if revealed AND not silhouette */
   if (!pokemonImg.classList.contains("silhouette")) {
     const fontSize = Math.floor(h * 0.075);
     ctx.font = `bold ${fontSize}px Arial`;
@@ -421,24 +418,28 @@ copyBtn.addEventListener("click", async () => {
     ctx.fillText(currentPokemon, x, y);
   }
 
+  // ✅ OPEN TAB IMMEDIATELY (synchronous)
+  let newTab = null;
+  if (IS_IOS) {
+    newTab = window.open("", "_blank");
+  }
+
   canvas.toBlob(async blob => {
     if (!blob) return;
 
-    /* 📱 iOS Safari → always open in new tab */
+    const url = URL.createObjectURL(blob);
+
     if (IS_IOS) {
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      // ✅ assign location after blob ready
+      newTab.location.href = url;
       return;
     }
 
-    /* Fallback for browsers without clipboard API */
     if (!navigator.clipboard?.write) {
-      const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
       return;
     }
 
-    /* 🖥 Desktop browsers */
     try {
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob })
@@ -447,9 +448,7 @@ copyBtn.addEventListener("click", async () => {
       copyBtn.classList.add("copied");
       setTimeout(() => copyBtn.classList.remove("copied"), 500);
     } catch (err) {
-      console.error("Clipboard failed, falling back:", err);
-
-      const url = URL.createObjectURL(blob);
+      console.error("Clipboard failed:", err);
       window.open(url, "_blank");
     }
   }, "image/png");
