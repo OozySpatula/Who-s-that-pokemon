@@ -14,13 +14,25 @@
     document.head.appendChild(cssLink);
   </script>
 
-  <!-- Awesomplete CDN -->
+  <!-- Awesomplete -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.7/awesomplete.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.7/awesomplete.min.js"></script>
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <!-- Icons -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/"
+    }
+  }
+  </script>
 </head>
+
 <body>
   <h1>Who's That Pokémon?</h1>
 
@@ -31,6 +43,7 @@
 
   <button id="settingsBtn" class="corner-info">Settings</button>
 
+  <!-- Settings panel -->
   <div id="settingsPanel" class="corner-panel">
     <h3>Settings</h3>
 
@@ -53,84 +66,75 @@
       <summary>Excluded forms</summary>
       <ul>
         <li>Nidoran genders (only male, just write nidoran)</li>
-        <li>Unown (only A, just write unown, could add)</li>
+        <li>Unown (only A, just write unown)</li>
         <li>Alolan Grimer (too similar)</li>
         <li>Hisuian Sneasel (too similar)</li>
         <li>Alolan Muk (too similar)</li>
         <li>Alolan Vulpix (too similar)</li>
-        <li>Paldean Tauros (could add some forms)</li>
-        <li>Anything added in Legends ZA (models not uploaded)</li>
-        <li>Galarian Corsola (no model uploaded)</li>
+        <li>Paldean Tauros</li>
+        <li>Legends ZA models missing</li>
+        <li>Galarian Corsola</li>
         <li>Spiky-eared Pikachu</li>
-        <li>Hats or outfits</li>
-        <li>Mega Rayquaza (can't find posed model)</li>
-        <li>Mega Medicham (can't find posed model)</li>
-        <li>Mega Latios (same model as mega latias)</li>
-        <li>Mega Sableye (can't find posed model)</li>
-        <li>East Sea Gastrodon (too similar)</li>
-        <li>Arceus Forms (just changes colour)</li>
-        <li>Shadow Pokemon</li>
+        <li>Outfits / hats</li>
+        <li>Mega Rayquaza</li>
+        <li>Mega Medicham</li>
+        <li>Mega Latios</li>
+        <li>Mega Sableye</li>
+        <li>East Sea Gastrodon</li>
+        <li>Arceus forms</li>
+        <li>Shadow Pokémon</li>
         <li>Gender differences</li>
-        <li>Mega Gallade (can't find posed model)</li>
+        <li>Mega Gallade</li>
       </ul>
     </details>
   </div>
 
+  <!-- 3D render container -->
   <div class="pokemon-container">
-    <img id="pokemonImg" alt="Pokémon silhouette" />
+    <canvas id="pokemonCanvas"></canvas>
+
     <div id="badge" class="badge">Correct!</div>
     <div id="pokemonName"></div>
 
-    <!-- Overlay icon buttons -->
+    <!-- Overlay buttons -->
     <div class="image-buttons">
       <!-- Toggle silhouette -->
       <button id="toggleSilhouetteBtn" class="icon-btn" title="Toggle silhouette">
-
-        <!-- Eye open -->
-        <svg id="eyeOpen"
-             xmlns="http://www.w3.org/2000/svg"
-             viewBox="0 0 24 24"
-             width="20" height="20"
-             fill="none"
-             stroke="currentColor"
-             stroke-width="1.5"
-             stroke-linecap="round"
-             stroke-linejoin="round">
+        <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24" width="20" height="20"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
           <circle cx="12" cy="12" r="3"/>
         </svg>
 
-        <!-- Eye slash -->
-        <svg id="eyeClosed"
-             xmlns="http://www.w3.org/2000/svg"
-             viewBox="0 0 24 24"
-             width="20" height="20"
-             fill="none"
-             stroke="currentColor"
-             stroke-width="1.5"
-             stroke-linecap="round"
-             stroke-linejoin="round"
+        <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24" width="20" height="20"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round"
              style="display:none;">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
           <circle cx="12" cy="12" r="3"/>
           <line x1="2" y1="2" x2="22" y2="22"/>
         </svg>
-
       </button>
 
-      <!-- Copy -->
+      <!-- Copy image -->
       <button id="copyBtn" class="icon-btn" title="Copy Image">
         <i class="bi bi-files"></i>
       </button>
     </div>
   </div>
 
-  <div class="input-container" style="position: relative; display: flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
+  <!-- Input -->
+  <div class="input-container"
+       style="position: relative; display: flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
     <input id="guess" placeholder="Enter Pokémon name" />
     <button id="guessButton">Guess</button>
     <button id="nextButton">Skip</button>
   </div>
 
-  <script type="module" src="./game.js?v=7"></script>
+  <!-- Game logic -->
+  <script type="module" src="./game.js?v=8"></script>
 </body>
 </html>
