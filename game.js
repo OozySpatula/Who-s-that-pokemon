@@ -215,11 +215,13 @@ function applySilhouette(model) {
     });
   });
   silhouetteMode = true;
+  renderOnce();
 }
 
 function restoreFlat(model) {
   applyFlatMaterials(model);
   silhouetteMode = false;
+  renderOnce();
 }
 
 /* ================= MODEL ================= */
@@ -264,6 +266,8 @@ function displayPokemon(pokemon) {
       applyFlatMaterials(currentModel);
       fitCameraToObjectIterative(currentModel, randomCameraDirection());
       applySilhouette(currentModel);
+
+      renderOnce();
     },
     undefined,
     (err) => {
@@ -273,12 +277,9 @@ function displayPokemon(pokemon) {
 }
 
 /* ================= RENDER LOOP ================= */
-function animate() {
-  requestAnimationFrame(animate);
+function renderOnce() {
   renderer.render(scene, camera);
 }
-
-animate();
 
 /* ================= DATA ================= */
 async function loadPokemonList() {
@@ -342,6 +343,7 @@ function checkGuess() {
 
   if (guess === currentPokemon.toLowerCase()) {
     restoreFlat(currentModel);
+    renderOnce();
 
     toggleSilhouetteBtn.style.display = "inline-flex";
 
@@ -459,6 +461,7 @@ document.addEventListener("keydown", e => {
 nextButton.addEventListener("click", () => {
   if (!guessed) {
     restoreFlat(currentModel);
+    renderOnce();
 
     toggleSilhouetteBtn.style.display = "inline-flex";
 
