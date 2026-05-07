@@ -26,18 +26,13 @@ let bestStreak = localStorage.getItem("bestStreak")
 
 /* ================= DOM ================= */
 const badgeEl = document.getElementById("badge");
-
 const guessInput = document.getElementById("guess");
 const guessButton = document.getElementById("guessButton");
 const nextButton = document.getElementById("nextButton");
-
 const pokemonNameEl = document.getElementById("pokemonName");
-
 const toggleSilhouetteBtn = document.getElementById("toggleSilhouetteBtn");
-
 const eyeOpen = document.getElementById("eyeOpen");
 const eyeClosed = document.getElementById("eyeClosed");
-
 const copyBtn = document.getElementById("copyBtn");
 
 /* ================= THREE ================= */
@@ -54,9 +49,7 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 1000);
 scene.add(camera);
 
 const loader = new GLTFLoader();
@@ -73,7 +66,6 @@ function resizeRenderer() {
   );
 
   renderer.setSize(size, size, false);
-
   camera.aspect = 1;
   camera.updateProjectionMatrix();
 }
@@ -101,7 +93,6 @@ function edgesContainPixels(pixels, width, height, margin = 1) {
       if (pixels[bottom] > 0) return true;
     }
   }
-
   for (let x = 0; x < margin; x++) {
     for (let y = 0; y < height; y++) {
       const left  = ((y * width + x) * 4) + 3;
@@ -110,7 +101,6 @@ function edgesContainPixels(pixels, width, height, margin = 1) {
       if (pixels[right] > 0) return true;
     }
   }
-
   return false;
 }
 
@@ -120,35 +110,31 @@ function fitCameraToObjectIterative(object, direction) {
   const size   = box.getSize(new THREE.Vector3());
 
   let distance = Math.max(size.x, size.y, size.z) * 1.5;
-
   const dir = direction.clone().normalize();
+  let target = center.clone();
 
   function placeCamera() {
-    camera.position.copy(
-      center.clone().add(dir.clone().multiplyScalar(distance))
-    );
-    camera.lookAt(center);
+    camera.position.copy(target.clone().add(dir.clone().multiplyScalar(distance)));
+    camera.lookAt(target);
+    camera.near = distance / 100;
+    camera.far  = distance * 100;
     camera.updateProjectionMatrix();
   }
-
-  placeCamera();
 
   const pixels = new Uint8Array(CHECK_RES * CHECK_RES * 4);
 
   function renderCheck() {
     renderer.setRenderTarget(edgeCheckTarget);
     renderer.render(scene, camera);
-    renderer.readRenderTargetPixels(
-      edgeCheckTarget, 0, 0, CHECK_RES, CHECK_RES, pixels
-    );
+    renderer.readRenderTargetPixels(edgeCheckTarget, 0, 0, CHECK_RES, CHECK_RES, pixels);
     renderer.setRenderTarget(null);
     return edgesContainPixels(pixels, CHECK_RES, CHECK_RES, 1);
   }
 
-  // Zoom OUT until not clipped
+  // STEP 1: Zoom out far enough to see the whole model
+  placeCamera();
   let clipped = renderCheck();
   let safety = 0;
-
   while (clipped && safety < 100) {
     distance *= 1.05;
     placeCamera();
@@ -156,38 +142,71 @@ function fitCameraToObjectIterative(object, direction) {
     safety++;
   }
 
-  // Zoom IN until just before clipping
-  safety = 0;
-
-  while (!clipped && safety < 100) {
-    const previousDistance = distance;
-    distance *= 0.98;
-    placeCamera();
-    clipped = renderCheck();
-
-    if (clipped) {
-      distance = previousDistance;
-      placeCamera();
-      break;
+  // STEP 2: Find visual centroid and correct the lookAt target
+  {
+    let sumX = 0, sumY = 0, count = 0;
+    for (let y = 0; y < CHECK_RES; y++) {
+      for (let x = 0; x < CHECK_RES; x++) {
+        if (pixels[(y * CHECK_RES + x) * 4 + 3] > 0) {
+          sumX += x;
+          sumY += y;
+          count++;
+        }
+      }
     }
 
+    if (count > 0) {
+      const ndcX =  (sumX / count / CHECK_RES) * 2 - 1;
+      const ndcY = -((sumY / count / CHECK_RES) * 2 - 1);
+
+      const halfH = Math.tan((camera.fov * Math.PI / 180) / 2) * distance;
+      const halfW = halfH * camera.aspect;
+
+      const forward = dir.clone().negate();
+      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+      const up    = new THREE.Vector3().crossVectors(right, forward).normalize();
+
+      target.addScaledVector(right, ndcX * halfW);
+      target.addScaledVector(up,    ndcY * halfH);
+
+      placeCamera();
+    }
+  }
+
+  // STEP 3: Zoom out again if recentering caused clipping
+  clipped = renderCheck();
+  safety = 0;
+  while (clipped && safety < 100) {
+    distance *= 1.05;
+    placeCamera();
+    clipped = renderCheck();
     safety++;
   }
 
-  // Small margin
-  distance *= 1.02;
-  placeCamera();
+  // STEP 4: Zoom in as tight as possible
+  safety = 0;
+  while (!clipped && safety < 100) {
+    const prev = distance;
+    distance *= 0.98;
+    placeCamera();
+    clipped = renderCheck();
+    if (clipped) {
+      distance = prev;
+      placeCamera();
+      break;
+    }
+    safety++;
+  }
 
-  camera.near = distance / 100;
-  camera.far  = distance * 100;
-  camera.updateProjectionMatrix();
+  // Tiny margin
+  distance *= 1.005;
+  placeCamera();
 }
 
 /* ================= CAMERA ================= */
 function randomCameraDirection() {
   const theta = 2 * Math.PI * Math.random();
   const phi   = Math.acos(2 * Math.random() - 1);
-
   return new THREE.Vector3(
     Math.sin(phi) * Math.cos(theta),
     Math.cos(phi),
@@ -209,11 +228,9 @@ function makeFlatMaterial(original) {
 function applyFlatMaterials(model) {
   model.traverse(child => {
     if (!child.isMesh) return;
-
     if (!child.userData.originalMaterial) {
       child.userData.originalMaterial = child.material;
     }
-
     child.material = makeFlatMaterial(child.userData.originalMaterial);
   });
 }
@@ -221,7 +238,6 @@ function applyFlatMaterials(model) {
 function applySilhouette(model) {
   model.traverse(child => {
     if (!child.isMesh) return;
-
     child.material = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
@@ -229,7 +245,6 @@ function applySilhouette(model) {
       side: THREE.DoubleSide
     });
   });
-
   silhouetteMode = true;
 }
 
@@ -275,16 +290,10 @@ function displayPokemon(pokemon) {
       });
 
       scene.add(currentModel);
-
       resizeRenderer();
 
-      // Apply flat materials first so iterative fit
-      // sees real alpha pixels, not silhouette black
       applyFlatMaterials(currentModel);
-
       fitCameraToObjectIterative(currentModel, randomCameraDirection());
-
-      // Now switch to silhouette for the guess
       applySilhouette(currentModel);
     },
     undefined,
@@ -335,12 +344,10 @@ async function loadPokemonList() {
 /* ================= POOL ================= */
 function updatePokemonPool() {
   const includeForms = document.getElementById("includeForms").checked;
-
   let pool = [];
 
   for (let gen = 1; gen <= MAX_GEN; gen++) {
     const cb = document.getElementById(`gen${gen}`);
-
     if (cb?.checked) {
       pool.push(...pokemonByGen[gen]);
       if (includeForms) pool.push(...formsByGen[gen]);
@@ -379,7 +386,6 @@ function checkGuess() {
     }
 
     badgeEl.style.opacity = 1;
-
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
 
     guessInput.disabled = true;
@@ -420,6 +426,100 @@ function setupAwesomplete() {
     awesompleteInstance.list = list;
   }
 }
+
+/* ================= CROP TRANSPARENT ================= */
+function cropTransparent(srcCanvas) {
+  const ctx = srcCanvas.getContext("2d");
+  const { width, height } = srcCanvas;
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+
+  const alpha = (x, y) => pixels[(y * width + x) * 4 + 3];
+
+  let minY = 0;
+  outer: for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) if (alpha(x, y)) { minY = y; break outer; }
+  }
+
+  let maxY = height - 1;
+  outer: for (let y = height - 1; y >= 0; y--) {
+    for (let x = 0; x < width; x++) if (alpha(x, y)) { maxY = y; break outer; }
+  }
+
+  let minX = 0;
+  outer: for (let x = 0; x < width; x++) {
+    for (let y = minY; y <= maxY; y++) if (alpha(x, y)) { minX = x; break outer; }
+  }
+
+  let maxX = width - 1;
+  outer: for (let x = width - 1; x >= 0; x--) {
+    for (let y = minY; y <= maxY; y++) if (alpha(x, y)) { maxX = x; break outer; }
+  }
+
+  const cropWidth  = maxX - minX + 1;
+  const cropHeight = maxY - minY + 1;
+
+  const cropped = document.createElement("canvas");
+  cropped.width  = cropWidth;
+  cropped.height = cropHeight;
+  cropped.getContext("2d").drawImage(
+    srcCanvas,
+    minX, minY, cropWidth, cropHeight,
+    0,    0,    cropWidth, cropHeight
+  );
+
+  return cropped;
+}
+
+/* ================= COPY ================= */
+copyBtn.addEventListener("click", async () => {
+  // Composite render onto white background
+  const offscreen = document.createElement("canvas");
+  offscreen.width  = canvas.width;
+  offscreen.height = canvas.height;
+
+  const ctx = offscreen.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+  ctx.drawImage(canvas, 0, 0);
+
+  // Crop transparent padding
+  const cropped = cropTransparent(offscreen);
+  const croppedCtx = cropped.getContext("2d");
+
+  // Add name text only when revealed and not re-silhouetted
+  if (guessed && !silhouetteMode) {
+    const w = cropped.width;
+    const h = cropped.height;
+    const fontSize = Math.floor(h * 0.075);
+
+    croppedCtx.font         = `bold ${fontSize}px Arial`;
+    croppedCtx.textAlign    = "center";
+    croppedCtx.textBaseline = "bottom";
+
+    const x = w / 2;
+    const y = h - h * 0.05;
+
+    croppedCtx.strokeStyle = "#333";
+    croppedCtx.lineWidth   = Math.max(2, fontSize * 0.12);
+    croppedCtx.strokeText(currentPokemon, x, y);
+
+    croppedCtx.fillStyle = "#ffffff";
+    croppedCtx.fillText(currentPokemon, x, y);
+  }
+
+  const dataURL = cropped.toDataURL("image/png");
+  const blob    = await (await fetch(dataURL)).blob();
+
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({ "image/png": blob })
+    ]);
+    copyBtn.classList.add("copied");
+    setTimeout(() => copyBtn.classList.remove("copied"), 500);
+  } catch {
+    window.open(dataURL, "_blank");
+  }
+});
 
 /* ================= EVENTS ================= */
 guessButton.addEventListener("click", checkGuess);
@@ -467,22 +567,6 @@ toggleSilhouetteBtn.addEventListener("click", () => {
   }
 });
 
-/* ================= COPY ================= */
-copyBtn.addEventListener("click", async () => {
-  const dataURL = renderer.domElement.toDataURL("image/png");
-  const blob    = await (await fetch(dataURL)).blob();
-
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({ "image/png": blob })
-    ]);
-    copyBtn.classList.add("copied");
-    setTimeout(() => copyBtn.classList.remove("copied"), 500);
-  } catch {
-    window.open(dataURL, "_blank");
-  }
-});
-
 /* ================= SETTINGS ================= */
 document.addEventListener("change", e => {
   if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
@@ -498,7 +582,6 @@ document.addEventListener("change", e => {
 /* ================= UI ================= */
 function renderGenCheckboxes() {
   const container = document.getElementById("genChecklist");
-
   for (let gen = 1; gen <= MAX_GEN; gen++) {
     const label = document.createElement("label");
     label.innerHTML = `<input type="checkbox" id="gen${gen}" checked /> Gen ${gen}`;
