@@ -396,93 +396,50 @@ function setupAwesomplete() {
   }
 }
 
-/* ================= CROP TRANSPARENT ================= */
-function cropTransparent(srcCanvas) {
-  const ctx = srcCanvas.getContext("2d");
-  const { width, height } = srcCanvas;
-  const pixels = ctx.getImageData(0, 0, width, height).data;
-
-  const alpha = (x, y) => pixels[(y * width + x) * 4 + 3];
-
-  let minY = 0;
-  outer: for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) if (alpha(x, y)) { minY = y; break outer; }
-  }
-
-  let maxY = height - 1;
-  outer: for (let y = height - 1; y >= 0; y--) {
-    for (let x = 0; x < width; x++) if (alpha(x, y)) { maxY = y; break outer; }
-  }
-
-  let minX = 0;
-  outer: for (let x = 0; x < width; x++) {
-    for (let y = minY; y <= maxY; y++) if (alpha(x, y)) { minX = x; break outer; }
-  }
-
-  let maxX = width - 1;
-  outer: for (let x = width - 1; x >= 0; x--) {
-    for (let y = minY; y <= maxY; y++) if (alpha(x, y)) { maxX = x; break outer; }
-  }
-
-  const cropWidth  = maxX - minX + 1;
-  const cropHeight = maxY - minY + 1;
-
-  const cropped = document.createElement("canvas");
-  cropped.width  = cropWidth;
-  cropped.height = cropHeight;
-  cropped.getContext("2d").drawImage(
-    srcCanvas,
-    minX, minY, cropWidth, cropHeight,
-    0,    0,    cropWidth, cropHeight
-  );
-
-  return cropped;
-}
-
 /* ================= COPY ================= */
 copyBtn.addEventListener("click", async () => {
-  // Composite render onto white background
   const offscreen = document.createElement("canvas");
   offscreen.width  = canvas.width;
   offscreen.height = canvas.height;
 
   const ctx = offscreen.getContext("2d");
+
+  // white background
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+
+  // draw 3D canvas
   ctx.drawImage(canvas, 0, 0);
 
-  // Crop transparent padding
-  const cropped = cropTransparent(offscreen);
-  const croppedCtx = cropped.getContext("2d");
-
-  // Add name text only when revealed and not re-silhouetted
+  // optional name label
   if (guessed && !silhouetteMode) {
-    const w = cropped.width;
-    const h = cropped.height;
-    const fontSize = Math.floor(h * 0.075);
+    const w = offscreen.width;
+    const h = offscreen.height;
+    const fontSize = Math.floor(h * 0.05);
 
-    croppedCtx.font         = `bold ${fontSize}px Arial`;
-    croppedCtx.textAlign    = "center";
-    croppedCtx.textBaseline = "bottom";
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
 
     const x = w / 2;
     const y = h - h * 0.05;
 
-    croppedCtx.strokeStyle = "#333";
-    croppedCtx.lineWidth   = Math.max(2, fontSize * 0.12);
-    croppedCtx.strokeText(currentPokemon, x, y);
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = Math.max(2, fontSize * 0.12);
+    ctx.strokeText(currentPokemon, x, y);
 
-    croppedCtx.fillStyle = "#ffffff";
-    croppedCtx.fillText(currentPokemon, x, y);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(currentPokemon, x, y);
   }
 
-  const dataURL = cropped.toDataURL("image/png");
-  const blob    = await (await fetch(dataURL)).blob();
+  const dataURL = offscreen.toDataURL("image/png");
+  const blob = await (await fetch(dataURL)).blob();
 
   try {
     await navigator.clipboard.write([
       new ClipboardItem({ "image/png": blob })
     ]);
+
     copyBtn.classList.add("copied");
     setTimeout(() => copyBtn.classList.remove("copied"), 500);
   } catch {
