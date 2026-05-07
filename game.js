@@ -59,14 +59,12 @@ function resizeRenderer() {
   const container = document.querySelector(".pokemon-container");
   if (!container) return;
 
-  const size = Math.min(
-    container.clientWidth,
-    window.innerHeight * 0.65,
-    500
-  );
+  const width = container.clientWidth;
+  const height = container.clientHeight;
 
-  renderer.setSize(size, size, false);
-  camera.aspect = 1;
+  renderer.setSize(width, height, false);
+
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
 }
 
@@ -142,36 +140,7 @@ function fitCameraToObjectIterative(object, direction) {
     safety++;
   }
 
-  // STEP 2: Find visual centroid and correct the lookAt target
-  {
-    let sumX = 0, sumY = 0, count = 0;
-    for (let y = 0; y < CHECK_RES; y++) {
-      for (let x = 0; x < CHECK_RES; x++) {
-        if (pixels[(y * CHECK_RES + x) * 4 + 3] > 0) {
-          sumX += x;
-          sumY += y;
-          count++;
-        }
-      }
-    }
-
-    if (count > 0) {
-      const ndcX =  (sumX / count / CHECK_RES) * 2 - 1;
-      const ndcY = -((sumY / count / CHECK_RES) * 2 - 1);
-
-      const halfH = Math.tan((camera.fov * Math.PI / 180) / 2) * distance;
-      const halfW = halfH * camera.aspect;
-
-      const forward = dir.clone().negate();
-      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
-      const up    = new THREE.Vector3().crossVectors(right, forward).normalize();
-
-      target.addScaledVector(right, ndcX * halfW);
-      target.addScaledVector(up,    ndcY * halfH);
-
-      placeCamera();
-    }
-  }
+  target.copy(center);
 
   // STEP 3: Zoom out again if recentering caused clipping
   clipped = renderCheck();
