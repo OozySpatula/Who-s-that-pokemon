@@ -102,24 +102,46 @@ function edgesContainPixels(pixels, width, height, margin = 1) {
   return false;
 }
 
+function getScreenSilhouetteBounds(pixels, width, height) {
+  let minX = width, maxX = 0;
+  let minY = height, maxY = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = pixels[(y * width + x) * 4 + 3];
+      if (alpha > 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  return { minX, maxX, minY, maxY };
+}
+
 function fitCameraToObjectIterative(object, direction) {
-  const box    = new THREE.Box3().setFromObject(object);
+  const box = new THREE.Box3().setFromObject(object);
   const center = box.getCenter(new THREE.Vector3());
-  const size   = box.getSize(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+
+  const dir = direction.clone().normalize();
+  const up = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(dir, up).normalize();
 
   let distance = Math.max(size.x, size.y, size.z) * 1.5;
-  const dir = direction.clone().normalize();
   let target = center.clone();
+
+  const pixels = new Uint8Array(CHECK_RES * CHECK_RES * 4);
 
   function placeCamera() {
     camera.position.copy(target.clone().add(dir.clone().multiplyScalar(distance)));
     camera.lookAt(target);
     camera.near = distance / 100;
-    camera.far  = distance * 100;
+    camera.far = distance * 100;
     camera.updateProjectionMatrix();
   }
-
-  const pixels = new Uint8Array(CHECK_RES * CHECK_RES * 4);
 
   function renderCheck() {
     renderer.setRenderTarget(edgeCheckTarget);
@@ -129,32 +151,22 @@ function fitCameraToObjectIterative(object, direction) {
     return edgesContainPixels(pixels, CHECK_RES, CHECK_RES, 1);
   }
 
-  // STEP 1: Zoom out far enough to see the whole model
+  // =========================
+  // STEP 1: INITIAL FIT (ZOOM OUT / IN)
+  // =========================
   placeCamera();
+
   let clipped = renderCheck();
   let safety = 0;
-  while (clipped && safety < 100) {
+
+  while (clipped && safety++ < 100) {
     distance *= 1.05;
     placeCamera();
     clipped = renderCheck();
-    safety++;
   }
 
-  target.copy(center);
-
-  // STEP 3: Zoom out again if recentering caused clipping
-  clipped = renderCheck();
   safety = 0;
-  while (clipped && safety < 100) {
-    distance *= 1.05;
-    placeCamera();
-    clipped = renderCheck();
-    safety++;
-  }
-
-  // STEP 4: Zoom in as tight as possible
-  safety = 0;
-  while (!clipped && safety < 100) {
+  while (!clipped && safety++ < 100) {
     const prev = distance;
     distance *= 0.98;
     placeCamera();
@@ -164,11 +176,54 @@ function fitCameraToObjectIterative(object, direction) {
       placeCamera();
       break;
     }
-    safety++;
   }
 
-  // Tiny margin
   distance *= 1.005;
+  placeCamera();
+
+  // =========================
+  // STEP 2: CENTERING PASS (NEW)
+  // =========================
+  renderer.setRenderTarget(edgeCheckTarget);
+  renderer.render(scene, camera);
+  renderer.readRenderTargetPixels(edgeCheckTarget, 0, 0, CHECK_RES, CHECK_RES, pixels);
+  renderer.setRenderTarget(null);
+
+  const bounds = getScreenSilhouetteBounds(pixels, CHECK_RES, CHECK_RES);
+
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+
+  const dx = (cx - CHECK_RES / 2) / CHECK_RES;
+  const dy = (cy - CHECK_RES / 2) / CHECK_RES;
+
+  // tune factor (scene dependent)
+  const panScale = distance * 0.6;
+
+  target.add(right.clone().multiplyScalar(-dx * panScale));
+  target.add(up.clone().multiplyScalar(dy * panScale));
+
+  placeCamera();
+
+  // =========================
+  // STEP 3: RE-FIT AFTER CENTERING (NEW)
+  // =========================
+  clipped = renderCheck();
+  safety = 0;
+
+  while (!clipped && safety++ < 100) {
+    const prev = distance;
+    distance *= 0.99;
+    placeCamera();
+    clipped = renderCheck();
+    if (clipped) {
+      distance = prev;
+      placeCamera();
+      break;
+    }
+  }
+
+  distance *= 1.002;
   placeCamera();
 }
 
