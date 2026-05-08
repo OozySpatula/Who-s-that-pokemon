@@ -316,6 +316,8 @@ function displayPokemon(pokemon) {
       });
 
       scene.add(currentModel);
+      currentModel.updateMatrixWorld(true);
+      scene.updateMatrixWorld(true);
 
       //
       // FREEZE ANIMATION ON FIRST FRAME
@@ -339,6 +341,9 @@ function displayPokemon(pokemon) {
 
       applyFlatMaterials(currentModel);
       fitCameraToObjectIterative(currentModel, randomCameraDirection());
+      camera.updateMatrixWorld(true);
+      renderer.render(scene, camera);
+
       applySilhouette(currentModel);
 
       renderOnce();
