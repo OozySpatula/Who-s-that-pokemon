@@ -316,6 +316,25 @@ function displayPokemon(pokemon) {
       });
 
       scene.add(currentModel);
+
+      //
+      // FREEZE ANIMATION ON FIRST FRAME
+      //
+      if (gltf.animations && gltf.animations.length > 0) {
+
+        const mixer = new THREE.AnimationMixer(currentModel);
+
+        const action = mixer.clipAction(gltf.animations[0]);
+
+        action.play();
+
+        // evaluate frame 0
+        mixer.setTime(0);
+
+        // stop future playback
+        action.paused = true;
+      }
+
       resizeRenderer();
 
       applyFlatMaterials(currentModel);
