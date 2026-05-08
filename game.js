@@ -576,7 +576,37 @@ toggleSilhouetteBtn.addEventListener("click", () => {
 });
 
 /* ================= SETTINGS ================= */
+function saveSettings() {
+  localStorage.setItem("includeForms",
+    document.getElementById("includeForms").checked);
+
+  localStorage.setItem("enableAutocomplete",
+    document.getElementById("enableAutocomplete").checked);
+
+  for (let gen = 1; gen <= MAX_GEN; gen++) {
+    localStorage.setItem(`gen${gen}`,
+      document.getElementById(`gen${gen}`).checked);
+  }
+}
+
+function loadSettings() {
+  document.getElementById("includeForms").checked =
+    localStorage.getItem("includeForms") === "true";
+
+  document.getElementById("enableAutocomplete").checked =
+    localStorage.getItem("enableAutocomplete") === "true";
+
+  for (let gen = 1; gen <= MAX_GEN; gen++) {
+    const saved = localStorage.getItem(`gen${gen}`);
+    if (saved !== null) {
+      document.getElementById(`gen${gen}`).checked =
+        saved === "true";
+    }
+  }
+}
+
 document.addEventListener("change", e => {
+  saveSettings();
   if (e.target.id === "includeForms" || /^gen\d+$/.test(e.target.id)) {
     streak = 0;
     document.getElementById("streak").textContent = streak;
@@ -600,6 +630,7 @@ function renderGenCheckboxes() {
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
   renderGenCheckboxes();
+  loadSettings();
   resizeRenderer();
   loadPokemonList();
 
