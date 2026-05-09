@@ -479,23 +479,33 @@ function setupAwesomplete() {
 
 /* ================= COPY ================= */
 copyBtn.addEventListener("click", async () => {
+
+  const IS_IOS =
+    /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  //
+  // CREATE IMAGE
+  //
   const offscreen = document.createElement("canvas");
+
   offscreen.width  = canvas.width;
   offscreen.height = canvas.height;
 
   const ctx = offscreen.getContext("2d");
 
-  // white background
+  // background
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, offscreen.width, offscreen.height);
 
-  // draw 3D canvas
+  // render 3D canvas
   ctx.drawImage(canvas, 0, 0);
 
-  // optional name label
+  // optional label
   if (guessed && !silhouetteMode) {
+
     const w = offscreen.width;
     const h = offscreen.height;
+
     const fontSize = Math.floor(h * 0.05);
 
     ctx.font = `bold ${fontSize}px Arial`;
@@ -507,25 +517,70 @@ copyBtn.addEventListener("click", async () => {
 
     ctx.strokeStyle = "#333";
     ctx.lineWidth = Math.max(2, fontSize * 0.12);
+
     ctx.strokeText(currentPokemon, x, y);
 
     ctx.fillStyle = "#ffffff";
     ctx.fillText(currentPokemon, x, y);
   }
 
-  const dataURL = offscreen.toDataURL("image/png");
-  const blob = await (await fetch(dataURL)).blob();
+  //
+  // IMPORTANT:
+  // open tab IMMEDIATELY for iOS
+  //
+  let newTab = null;
 
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({ "image/png": blob })
-    ]);
-
-    copyBtn.classList.add("copied");
-    setTimeout(() => copyBtn.classList.remove("copied"), 500);
-  } catch {
-    window.open(dataURL, "_blank");
+  if (IS_IOS) {
+    newTab = window.open("", "_blank");
   }
+
+  //
+  // CREATE BLOB
+  //
+  offscreen.toBlob(async (blob) => {
+
+    if (!blob) return;
+
+    const url = URL.createObjectURL(blob);
+
+    //
+    // iOS Safari fallback
+    //
+    if (IS_IOS) {
+      newTab.location.href = url;
+      return;
+    }
+
+    //
+    // normal clipboard copy
+    //
+    if (!navigator.clipboard?.write) {
+      window.open(url, "_blank");
+      return;
+    }
+
+    try {
+
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "image/png": blob
+        })
+      ]);
+
+      copyBtn.classList.add("copied");
+
+      setTimeout(() => {
+        copyBtn.classList.remove("copied");
+      }, 500);
+
+    } catch (err) {
+
+      console.error("Clipboard failed:", err);
+
+      window.open(url, "_blank");
+    }
+
+  }, "image/png");
 });
 
 /* ================= EVENTS ================= */
