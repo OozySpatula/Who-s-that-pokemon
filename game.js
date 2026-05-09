@@ -239,13 +239,28 @@ function randomCameraDirection() {
 
 /* ================= MATERIALS ================= */
 function makeFlatMaterial(original) {
-  return new THREE.MeshBasicMaterial({
+  const mat = new THREE.MeshBasicMaterial({
     map: original.map || null,
-    transparent: true,
-    alphaTest: 0.01,
+    color: 0xffffff,
+
+    transparent: original.transparent ?? false,
+    opacity: original.opacity ?? 1,
+
+    alphaMap: original.alphaMap || null,
+    alphaTest: original.alphaTest ?? 0,
+
     side: THREE.DoubleSide,
-    color: 0xffffff
+
+    blending: original.blending ?? THREE.NormalBlending,
+
+    depthWrite: original.depthWrite ?? true,
+    depthTest: original.depthTest ?? true,
+
+    premultipliedAlpha: original.premultipliedAlpha ?? false
   });
+
+  mat.needsUpdate = true;
+  return mat;
 }
 
 function applyFlatMaterials(model) {
