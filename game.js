@@ -566,10 +566,19 @@ toggleSilhouetteBtn.addEventListener("click", () => {
 
   if (silhouetteMode) {
     restoreFlat(currentModel);
+
+    // SHOW NAME
+    pokemonNameEl.textContent = currentPokemon;
+    pokemonNameEl.style.opacity = 1;
+
     eyeOpen.style.display = "none";
     eyeClosed.style.display = "block";
   } else {
     applySilhouette(currentModel);
+
+    // HIDE name
+    pokemonNameEl.style.opacity = 0;
+
     eyeOpen.style.display = "block";
     eyeClosed.style.display = "none";
   }
