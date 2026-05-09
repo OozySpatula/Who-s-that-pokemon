@@ -627,10 +627,42 @@ function renderGenCheckboxes() {
   }
 }
 
+function disableLastGenCheckbox() {
+  const genCheckboxes =
+    document.querySelectorAll("#genChecklist input[type=checkbox]");
+
+  function updateDisabledState() {
+
+    // get all checked boxes
+    const checked =
+      Array.from(genCheckboxes).filter(cb => cb.checked);
+
+    // re-enable everything first
+    genCheckboxes.forEach(cb => {
+      cb.disabled = false;
+    });
+
+    // if only one remains checked,
+    // disable that final checkbox
+    if (checked.length === 1) {
+      checked[0].disabled = true;
+    }
+  }
+
+  // run whenever a checkbox changes
+  genCheckboxes.forEach(cb => {
+    cb.addEventListener("change", updateDisabledState);
+  });
+
+  // run once immediately on startup
+  updateDisabledState();
+}
+
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
   renderGenCheckboxes();
   loadSettings();
+  disableLastGenCheckbox();
   resizeRenderer();
   loadPokemonList();
 
