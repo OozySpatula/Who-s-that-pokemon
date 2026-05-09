@@ -280,7 +280,7 @@ function restoreFlat(model) {
 
 /* ================= MODEL PATH ================= */
 function getModelPath(pokemon) {
-  return `./public/models/${pokemon.replace(/\./g, "")}.glb`;
+  return `./public/models/${pokemon}.glb`;
 }
 
 /* ================= PRELOAD SYSTEM ================= */
