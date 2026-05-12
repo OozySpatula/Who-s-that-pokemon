@@ -276,13 +276,34 @@ function applyFlatMaterials(model) {
 function applySilhouette(model) {
   model.traverse(child => {
     if (!child.isMesh) return;
+
+    const original = child.userData.originalMaterial || child.material;
+
     child.material = new THREE.MeshBasicMaterial({
       color: 0x000000,
-      transparent: true,
-      alphaTest: 0.01,
-      side: THREE.DoubleSide
+
+      // preserve transparency info
+      map: original.map || null,
+      alphaMap: original.alphaMap || null,
+
+      transparent: original.transparent ?? true,
+      opacity: original.opacity ?? 1,
+
+      alphaTest: original.alphaTest ?? 0.01,
+
+      side: THREE.DoubleSide,
+
+      blending: original.blending ?? THREE.NormalBlending,
+
+      depthWrite: original.depthWrite ?? true,
+      depthTest: original.depthTest ?? true,
+
+      premultipliedAlpha: original.premultipliedAlpha ?? false
     });
+
+    child.material.needsUpdate = true;
   });
+
   silhouetteMode = true;
   renderOnce();
 }
